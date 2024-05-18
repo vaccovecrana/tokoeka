@@ -40,7 +40,7 @@ public class TkControlHdlTest {
 
       var send = (Consumer<String>) log::info;
       var ctlHdl = new TkControlHdl(cfg, send)
-          .withAudioHandler(new TkAudioHdl(cfg, send, (flags, sequenceNumber, sMeter, rssi, rawData) -> {
+          .withAudioHandler(new TkAudioHdl(cfg, send, (cfg0, flags, sequenceNumber, sMeter, rssi, rawData) -> {
             log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, rssi, rawData.length);
           }))
           .withWaterfallHandler(new TkWaterfallHdl(send, (xBin, sequenceNumber, flags, rawWfData) -> {

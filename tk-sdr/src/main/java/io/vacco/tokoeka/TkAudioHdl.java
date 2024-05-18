@@ -85,7 +85,7 @@ public class TkAudioHdl {
       if (config.compression) {
         rawPcm = adPcm.decode(rawPcm);
       }
-      audioPin.onAudio(flags, sequenceNumber, sMeter, rssi, rawPcm);
+      audioPin.onAudio((int) config.sampleRate, flags, sequenceNumber, sMeter, rssi, rawPcm);
     }
 
     counter.update();

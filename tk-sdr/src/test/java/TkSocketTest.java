@@ -50,11 +50,11 @@ public class TkSocketTest {
 
         var player = new TkAudioPlayer(16, 1);
         var ctlHdl = new TkControlHdl(cfg, send)
-            .withAudioHandler(new TkAudioHdl(cfg, send, (flags, sequenceNumber, sMeter, rssi, rawPcm) -> {
+            .withAudioHandler(new TkAudioHdl(cfg, send, (sampleRate, flags, sequenceNumber, sMeter, rssi, rawPcm) -> {
               log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, String.format("%6.2f", rssi), rawPcm.length);
               // log.info("squelch threshold: {}", squelch.threshold);
               squelch.processAudio(rawPcm);
-              player.play((int) cfg.sampleRate, rawPcm);
+              player.play(sampleRate, rawPcm);
             }));
         var latch = new CountDownLatch(1);
 
