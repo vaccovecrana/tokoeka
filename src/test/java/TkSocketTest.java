@@ -2,6 +2,7 @@ import io.vacco.shax.logging.ShOption;
 import io.vacco.tokoeka.*;
 import io.vacco.tokoeka.config.TkModulation;
 import io.vacco.tokoeka.config.TkConfig;
+import io.vacco.tokoeka.util.TkAudioPlayer;
 import io.vacco.tokoeka.util.TkSquelch;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
@@ -51,7 +52,7 @@ public class TkSocketTest {
           log.info(">>>> Squelch. Signal avg: {}", signalAvg);
         }, 1.0);
 
-        AudioPlayer[] player = new AudioPlayer[1];
+        TkAudioPlayer[] player = new TkAudioPlayer[1];
 
         var ctlHdl = new TkControlHdl(cfg, send)
             .withAudioHandler(new TkAudioHdl(cfg, send, (flags, sequenceNumber, sMeter, rssi, rawData) -> {
@@ -59,7 +60,7 @@ public class TkSocketTest {
               // log.info("squelch threshold: {}", squelch.threshold);
               squelch.processAudio(rawData);
               if (player[0] == null) {
-                player[0] = new AudioPlayer((int) cfg.sampleRate);
+                player[0] = new TkAudioPlayer((int) cfg.sampleRate, 16, 1);
               }
               player[0].play(rawData);
             }));
