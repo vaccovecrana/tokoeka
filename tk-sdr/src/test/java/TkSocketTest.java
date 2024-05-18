@@ -44,8 +44,8 @@ public class TkSocketTest {
           }
         };
 
-        var squelch = new TkSquelch(0, (audio, signalAvg) -> {
-          log.info(">>>> Squelch. Signal avg: {}", signalAvg);
+        var squelch = new TkSquelch(0, (open, pcm, signalAvg) -> {
+          log.info(">>>> Squelch [open: {}, avg: {}]", open, signalAvg);
         }, 1.0);
 
         var latch = new CountDownLatch(1);

@@ -1,8 +1,10 @@
 package io.vacco.tokoeka.util;
 
+import io.vacco.tokoeka.spi.TkSquelchPin;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.function.BiConsumer;
+import java.util.Objects;
 
 import static io.vacco.tokoeka.util.TkAudio.signalAverageOf;
 
@@ -10,7 +12,7 @@ public class TkSquelch {
 
   public double threshold;
 
-  private final BiConsumer<byte[], Double> audioConsumer;
+  private final TkSquelchPin pin;
   private final long fallOffTimeMs;
 
   private long    lastSignalTime = 0;
@@ -22,16 +24,16 @@ public class TkSquelch {
   private int     noiseFloorCount = 0;
   private double  noiseFloorMultiplier = 1.00;
 
-  public TkSquelch(double threshold, BiConsumer<byte[], Double> audioConsumer, double fallOffSeconds) {
+  public TkSquelch(double threshold, TkSquelchPin pin, double fallOffSeconds) {
     this.threshold = threshold;
-    this.audioConsumer = audioConsumer;
+    this.pin = Objects.requireNonNull(pin);
     this.fallOffTimeMs = (long) (fallOffSeconds * 1000);
   }
 
-  public void processAudio(byte[] audioData) {
+  public void processAudio(byte[] pcm) {
     var currentTime = System.currentTimeMillis();
     if (sampleNoiseFloor) {
-      adjustNoiseFloor(audioData);
+      adjustNoiseFloor(pcm);
       if (currentTime >= noiseFloorSampleEndTime) {
         finalizeNoiseFloor();
         sampleNoiseFloor = false;
@@ -39,22 +41,24 @@ public class TkSquelch {
       return;
     }
 
-    var signalAvg = signalAverageOf(audioData);
+    var signalAvg = signalAverageOf(pcm);
     if (signalAvg > threshold) {
       lastSignalTime = currentTime;
       squelchOpen = true;
     } else if ((currentTime - lastSignalTime) > fallOffTimeMs) {
+      if (squelchOpen) {
+        pin.onUpdate(false, pcm, signalAvg);
+      }
       squelchOpen = false;
     }
     if (squelchOpen) {
-      audioConsumer.accept(audioData, signalAvg);
+      pin.onUpdate(true, pcm, signalAvg);
     }
   }
 
   private void adjustNoiseFloor(byte[] audioData) {
     var buffer = ByteBuffer.wrap(audioData);
     buffer.order(ByteOrder.LITTLE_ENDIAN);
-
     while (buffer.hasRemaining()) {
       short sample = buffer.getShort();
       noiseFloorSum += Math.abs(sample);
