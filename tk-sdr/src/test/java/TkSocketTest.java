@@ -48,19 +48,21 @@ public class TkSocketTest {
           log.info(">>>> Squelch. Signal avg: {}", signalAvg);
         }, 1.0);
 
+        var latch = new CountDownLatch(1);
         var player = new TkAudioPlayer(16, 1);
         var ctlHdl = new TkControlHdl(cfg, send)
-            .withAudioHandler(new TkAudioHdl(cfg, send, (sampleRate, flags, sequenceNumber, sMeter, rssi, rawPcm) -> {
-              log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, String.format("%6.2f", rssi), rawPcm.length);
-              // log.info("squelch threshold: {}", squelch.threshold);
-              squelch.processAudio(rawPcm);
-              player.play(sampleRate, rawPcm);
-            }));
-        var latch = new CountDownLatch(1);
+          .withAudioHandler(new TkAudioHdl(cfg, send, (sampleRate, flags, sequenceNumber, sMeter, rssi, rawPcm) -> {
+            log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, String.format("%6.2f", rssi), rawPcm.length);
+            // log.info("squelch threshold: {}", squelch.threshold);
+            squelch.processAudio(rawPcm);
+            player.play(sampleRate, rawPcm);
+          }))
+          .withControlPin((code, key, value, remote, e) -> {
+            log.info("control event: {} [{}] [{}] {}", code, key, value, remote, e);
+            latch.countDown();
+          });
 
-        sock.withHandler(ctlHdl)
-            .withPin((code, reason, remote, e) -> latch.countDown());
-
+        sock.withHandler(ctlHdl);
         squelch.detectNoiseFloor(4500, 2);
 
         cfg.username = "kiwi";

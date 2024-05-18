@@ -2,6 +2,7 @@ package io.vacco.tokoeka;
 
 import io.vacco.tokoeka.schema.dx.TkDxConfig;
 import io.vacco.tokoeka.schema.kiwi.TkKiwiConfig;
+import io.vacco.tokoeka.spi.TkControlPin;
 import io.vacco.tokoeka.spi.TkJsonIn;
 import io.vacco.tokoeka.schema.TkConfig;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
   private TkAudioHdl audioHdl;
   private TkWaterfallHdl waterfallHdl;
   private TkJsonIn jsonIn;
+  public  TkControlPin controlPin;
 
   public TkKiwiConfig kiwiConfig;
   public TkDxConfig dxConfig, dxCommConfig;
@@ -68,11 +70,20 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
       case "load_dxcfg":      if (this.jsonIn != null) this.dxConfig = loadKiwiDxConfig(value, jsonIn); break;
       case "load_dxcomm_cfg": if (this.jsonIn != null) this.dxCommConfig = loadKiwiDxConfig(value, jsonIn); break;
       case "cfg_loaded":      break; // cool...
-      case "badp":            if (!"0".equals(value)) this.onKiwiError(key, value); break;
+      case "badp":
+        if (!"0".equals(value) && this.controlPin != null) {
+          controlPin.onEvent(-1, key, value, true, null);
+        }
+        break;
       case "too_busy":
       case "redirect":
-      case "down":            this.onKiwiError(key, value); break;
-      default:                log.warn("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());
+      case "down":
+        if (this.controlPin != null) {
+          controlPin.onEvent(-1, key, value, true, null);
+        }
+        break;
+      default:
+        log.warn("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());
     }
   }
 
@@ -107,25 +118,15 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
         default: log.warn("Unsupported message tag {} ({})", tag, data.remaining());
       }
     } catch (Exception e) {
-      onError(e);
+      if (this.controlPin != null) {
+        controlPin.onEvent(-1, null, null, false, e);
+      }
     }
   }
 
   public void onAuth() {
     tx.accept(setAuth(config.username, config.password));
     tx.accept(setIdentity(config.identUser));
-  }
-
-  public void onClose(int code, String reason, boolean remote) {
-    log.info("Socket closed [{}, {}, {}]", code, reason, remote);
-  }
-
-  public void onError(Exception e) {
-    log.error("Message handler processing error", e);
-  }
-
-  public void onKiwiError(String key, String value) {
-    this.onError(new IllegalStateException(String.format("%s: %s", key, value)));
   }
 
   public TkControlHdl withAudioHandler(TkAudioHdl hdl) {
@@ -140,6 +141,11 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
 
   public TkControlHdl withJsonIn(TkJsonIn jsonIn) {
     this.jsonIn = Objects.requireNonNull(jsonIn);
+    return this;
+  }
+
+  public TkControlHdl withControlPin(TkControlPin pin) {
+    this.controlPin = Objects.requireNonNull(pin);
     return this;
   }
 

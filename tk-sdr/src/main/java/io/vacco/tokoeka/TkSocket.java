@@ -1,6 +1,5 @@
 package io.vacco.tokoeka;
 
-import io.vacco.tokoeka.spi.TkSocketPin;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import java.net.URI;
@@ -9,7 +8,6 @@ import java.util.*;
 
 public class TkSocket extends WebSocketClient {
 
-  private TkSocketPin socketPin;
   private TkControlHdl handler;
 
   public TkSocket(URI serverUri) {
@@ -31,30 +29,19 @@ public class TkSocket extends WebSocketClient {
   @Override public void onMessage(String message) { }
 
   @Override public void onClose(int code, String reason, boolean remote) {
-    if (handler != null) {
-      handler.onClose(code, reason, remote);
-    }
-    if (socketPin != null) {
-      socketPin.onClose(code, reason, remote, null);
+    if (handler != null && handler.controlPin != null) {
+      handler.controlPin.onEvent(code, null, reason, remote, null);
     }
   }
 
   @Override public void onError(Exception ex) {
-    if (handler != null) {
-      handler.onError(ex);
-    }
-    if (socketPin != null) {
-      socketPin.onClose(-1, null, false, ex);
+    if (handler != null && handler.controlPin != null) {
+      handler.controlPin.onEvent(-1, null, null, false, ex);
     }
   }
 
   public TkSocket withHandler(TkControlHdl handler) {
     this.handler = Objects.requireNonNull(handler);
-    return this;
-  }
-
-  public TkSocket withPin(TkSocketPin pin) {
-    this.socketPin = Objects.requireNonNull(pin);
     return this;
   }
 
