@@ -83,7 +83,9 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
         }
         break;
       default:
-        log.warn("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());
+        if (log.isDebugEnabled()) {
+          log.debug("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());
+        }
     }
   }
 
