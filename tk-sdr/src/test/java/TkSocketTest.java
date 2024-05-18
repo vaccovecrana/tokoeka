@@ -1,19 +1,15 @@
 import io.vacco.shax.logging.ShOption;
 import io.vacco.tokoeka.*;
-import io.vacco.tokoeka.schema.TkModulation;
-import io.vacco.tokoeka.schema.TkConfig;
-import io.vacco.tokoeka.util.TkAudioPlayer;
-import io.vacco.tokoeka.util.TkSquelch;
+import io.vacco.tokoeka.schema.*;
+import io.vacco.tokoeka.util.*;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 
 import java.awt.*;
 import java.net.URI;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 import static j8spec.J8Spec.*;
@@ -52,17 +48,13 @@ public class TkSocketTest {
           log.info(">>>> Squelch. Signal avg: {}", signalAvg);
         }, 1.0);
 
-        TkAudioPlayer[] player = new TkAudioPlayer[1];
-
+        var player = new TkAudioPlayer(16, 1);
         var ctlHdl = new TkControlHdl(cfg, send)
-            .withAudioHandler(new TkAudioHdl(cfg, send, (flags, sequenceNumber, sMeter, rssi, rawData) -> {
-              log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, String.format("%6.2f", rssi), rawData.length);
+            .withAudioHandler(new TkAudioHdl(cfg, send, (flags, sequenceNumber, sMeter, rssi, rawPcm) -> {
+              log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, String.format("%6.2f", rssi), rawPcm.length);
               // log.info("squelch threshold: {}", squelch.threshold);
-              squelch.processAudio(rawData);
-              if (player[0] == null) {
-                player[0] = new TkAudioPlayer((int) cfg.sampleRate, 16, 1);
-              }
-              player[0].play(rawData);
+              squelch.processAudio(rawPcm);
+              player.play((int) cfg.sampleRate, rawPcm);
             }));
         var latch = new CountDownLatch(1);
 
@@ -90,9 +82,9 @@ public class TkSocketTest {
         cfg.nrSpecActiveSnr = 1000;
 
         sock.connectBlocking();
-        log.info("{}", latch.await(90, TimeUnit.SECONDS));
+        log.info("{}", latch.await(20, TimeUnit.SECONDS));
         sock.closeBlocking();
-        player[0].close();
+        player.close();
       } else {
         log.info("CI/CD build. Stopping.");
       }
