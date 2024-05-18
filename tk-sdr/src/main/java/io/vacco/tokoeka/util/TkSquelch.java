@@ -12,7 +12,7 @@ public class TkSquelch {
 
   public double threshold;
 
-  private final TkSquelchPin pin;
+  private TkSquelchPin pin;
   private final long fallOffTimeMs;
 
   private long    lastSignalTime = 0;
@@ -24,9 +24,8 @@ public class TkSquelch {
   private int     noiseFloorCount = 0;
   private double  noiseFloorMultiplier = 1.00;
 
-  public TkSquelch(double threshold, TkSquelchPin pin, double fallOffSeconds) {
+  public TkSquelch(double threshold, double fallOffSeconds) {
     this.threshold = threshold;
-    this.pin = Objects.requireNonNull(pin);
     this.fallOffTimeMs = (long) (fallOffSeconds * 1000);
   }
 
@@ -46,12 +45,12 @@ public class TkSquelch {
       lastSignalTime = currentTime;
       squelchOpen = true;
     } else if ((currentTime - lastSignalTime) > fallOffTimeMs) {
-      if (squelchOpen) {
+      if (squelchOpen && pin != null) {
         pin.onUpdate(false, pcm, signalAvg);
       }
       squelchOpen = false;
     }
-    if (squelchOpen) {
+    if (squelchOpen && pin != null) {
       pin.onUpdate(true, pcm, signalAvg);
     }
   }
@@ -81,5 +80,10 @@ public class TkSquelch {
     this.noiseFloorSum = 0;
     this.noiseFloorCount = 0;
     this.noiseFloorMultiplier = noiseFloorMultiplier;
+  }
+
+  public TkSquelch withPin(TkSquelchPin pin) {
+    this.pin = Objects.requireNonNull(pin);
+    return this;
   }
 }

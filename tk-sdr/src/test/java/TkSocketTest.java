@@ -44,10 +44,9 @@ public class TkSocketTest {
           }
         };
 
-        var squelch = new TkSquelch(0, (open, pcm, signalAvg) -> {
+        var squelch = new TkSquelch(0, 1.0).withPin((open, pcm, signalAvg) -> {
           log.info(">>>> Squelch [open: {}, avg: {}]", open, signalAvg);
-        }, 1.0);
-
+        });
         var latch = new CountDownLatch(1);
         var player = new TkAudioPlayer(16, 1);
         var ctlHdl = new TkControlHdl(cfg, send)
