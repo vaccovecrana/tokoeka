@@ -58,7 +58,9 @@ public class TkSocketTest {
           }))
           .withControlPin((code, key, value, remote, e) -> {
             log.info("control event: {} [{}] [{}] {}", code, key, value, remote, e);
-            latch.countDown();
+            if (!TkCommand.isLoginOk(key, value)) {
+              latch.countDown();
+            }
           });
 
         sock.withHandler(ctlHdl);

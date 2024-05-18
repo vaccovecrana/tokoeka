@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import static io.vacco.tokoeka.schema.TkConstants.*;
 import static io.vacco.tokoeka.util.TkCommand.*;
 import static io.vacco.tokoeka.util.TkFormat.*;
 import static java.lang.Double.parseDouble;
@@ -78,10 +79,10 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
       case "load_dxcfg":      if (this.jsonIn != null) this.dxConfig = loadKiwiDxConfig(value, jsonIn); break;
       case "load_dxcomm_cfg": if (this.jsonIn != null) this.dxCommConfig = loadKiwiDxConfig(value, jsonIn); break;
       case "cfg_loaded":      if (this.configPin != null) this.configPin.onConfig(kiwiConfig, dxConfig, dxCommConfig); break;
-      case "badp":            if (!"0".equals(value)) controlEvent(key, value, true, null); break;
-      case "too_busy":
-      case "redirect":
-      case "down":            controlEvent(key, value, true, null); break;
+      case badp:
+      case too_busy:
+      case redirect:
+      case down:              controlEvent(key, value, true, null); break;
       default:
         if (log.isDebugEnabled()) {
           log.debug("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());
@@ -92,7 +93,7 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
   private void processMsg(String body) {
     var params = parseParameters(body);
     if (log.isDebugEnabled()) {
-      log.debug(">> MSG {} {}", body, params);
+      log.debug(">> {} {} {}", MSG, body, params);
     }
     params.forEach(this::processKeyValue);
   }
@@ -113,9 +114,9 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
       }
 
       switch (tag) {
-        case "MSG": processMsg(asString(skip(data, 1))); break;
-        case "SND": processAudio(data); break;
-        case "W/F": processWaterfall(skip(data, 1)); break;
+        case MSG: processMsg(asString(skip(data, 1))); break;
+        case SND: processAudio(data); break;
+        case WF:  processWaterfall(skip(data, 1)); break;
         // case "EXT": processExt(asString(skip(data, 1))); break; TODO what should be implemented?
         default: log.warn("Unsupported message tag {} ({})", tag, data.remaining());
       }
