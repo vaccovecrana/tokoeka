@@ -51,6 +51,12 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
     }
   }
 
+  private void controlEvent(String key, String value, boolean remote, Exception e) {
+    if (this.controlPin != null) {
+      this.controlPin.onEvent(-1, key, value, remote, e);
+    }
+  }
+
   private void processKeyValue(String key, String value) {
     switch (key) {
       case "last_community_download": log.info(URLDecoder.decode(value, StandardCharsets.UTF_8)); break;
@@ -70,18 +76,10 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
       case "load_dxcfg":      if (this.jsonIn != null) this.dxConfig = loadKiwiDxConfig(value, jsonIn); break;
       case "load_dxcomm_cfg": if (this.jsonIn != null) this.dxCommConfig = loadKiwiDxConfig(value, jsonIn); break;
       case "cfg_loaded":      break; // cool...
-      case "badp":
-        if (!"0".equals(value) && this.controlPin != null) {
-          controlPin.onEvent(-1, key, value, true, null);
-        }
-        break;
+      case "badp":            if (!"0".equals(value)) controlEvent(key, value, true, null); break;
       case "too_busy":
       case "redirect":
-      case "down":
-        if (this.controlPin != null) {
-          controlPin.onEvent(-1, key, value, true, null);
-        }
-        break;
+      case "down":            controlEvent(key, value, true, null); break;
       default:
         if (log.isDebugEnabled()) {
           log.debug("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());
@@ -120,9 +118,7 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
         default: log.warn("Unsupported message tag {} ({})", tag, data.remaining());
       }
     } catch (Exception e) {
-      if (this.controlPin != null) {
-        controlPin.onEvent(-1, null, null, false, e);
-      }
+      controlEvent(null, null, false, e);
     }
   }
 
