@@ -4,3 +4,5 @@ pluginManagement {
     gradlePluginPortal()
   }
 }
+
+include("tk-schema", "tk-sdr")

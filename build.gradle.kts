@@ -1,17 +1,12 @@
-plugins { id("io.vacco.oss.gitflow") version "0.9.8" }
+plugins { id("io.vacco.oss.gitflow") version "0.9.8" apply(false) }
 
-group = "io.vacco.tokoeka"
-version = "0.1.0"
+subprojects {
+  apply(plugin = "io.vacco.oss.gitflow")
 
-configure<io.vacco.oss.gitflow.GsPluginProfileExtension> {
-  addJ8Spec()
-  sharedLibrary(true, false)
-}
+  group = "io.vacco.tokoeka"
+  version = "0.1.0"
 
-val api by configurations
-
-dependencies {
-  api("org.java-websocket:Java-WebSocket:1.5.6")
-  testImplementation("io.vacco.shax:shax:2.0.6.0.1.0")
-  testImplementation("com.google.code.gson:gson:2.10.1")
+  configure<io.vacco.oss.gitflow.GsPluginProfileExtension> {
+    sharedLibrary(true, false)
+  }
 }
