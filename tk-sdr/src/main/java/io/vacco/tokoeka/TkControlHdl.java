@@ -2,6 +2,7 @@ package io.vacco.tokoeka;
 
 import io.vacco.tokoeka.schema.dx.TkDxConfig;
 import io.vacco.tokoeka.schema.kiwi.TkKiwiConfig;
+import io.vacco.tokoeka.spi.TkConfigPin;
 import io.vacco.tokoeka.spi.TkControlPin;
 import io.vacco.tokoeka.spi.TkJsonIn;
 import io.vacco.tokoeka.schema.TkConfig;
@@ -26,10 +27,11 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
   private final TkConfig config;
   private final Consumer<String> tx;
 
-  private TkAudioHdl audioHdl;
-  private TkWaterfallHdl waterfallHdl;
-  private TkJsonIn jsonIn;
-  public  TkControlPin controlPin;
+  private TkAudioHdl      audioHdl;
+  private TkWaterfallHdl  waterfallHdl;
+  private TkJsonIn        jsonIn;
+  private TkConfigPin     configPin;
+  protected TkControlPin  controlPin;
 
   public TkKiwiConfig kiwiConfig;
   public TkDxConfig dxConfig, dxCommConfig;
@@ -75,7 +77,7 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
       case "load_cfg":        if (this.jsonIn != null) this.kiwiConfig = loadKiwiConfig(value, jsonIn); break;
       case "load_dxcfg":      if (this.jsonIn != null) this.dxConfig = loadKiwiDxConfig(value, jsonIn); break;
       case "load_dxcomm_cfg": if (this.jsonIn != null) this.dxCommConfig = loadKiwiDxConfig(value, jsonIn); break;
-      case "cfg_loaded":      break; // cool...
+      case "cfg_loaded":      if (this.configPin != null) this.configPin.onConfig(kiwiConfig, dxConfig, dxCommConfig); break;
       case "badp":            if (!"0".equals(value)) controlEvent(key, value, true, null); break;
       case "too_busy":
       case "redirect":
@@ -144,6 +146,11 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
 
   public TkControlHdl withControlPin(TkControlPin pin) {
     this.controlPin = Objects.requireNonNull(pin);
+    return this;
+  }
+
+  public TkControlHdl withConfigPin(TkConfigPin pin) {
+    this.configPin = Objects.requireNonNull(pin);
     return this;
   }
 

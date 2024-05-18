@@ -40,13 +40,20 @@ public class TkControlHdlTest {
 
       var send = (Consumer<String>) log::info;
       var ctlHdl = new TkControlHdl(cfg, send)
-          .withAudioHandler(new TkAudioHdl(cfg, send, (cfg0, flags, sequenceNumber, sMeter, rssi, rawData) -> {
-            log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, rssi, rawData.length);
-          }))
-          .withWaterfallHandler(new TkWaterfallHdl(send, (xBin, sequenceNumber, flags, rawWfData) -> {
-            log.info("bin: {} seqNo: {} flags: {} wfData: {}", xBin, sequenceNumber, flags, rawWfData.length);
-          }))
-          .withJsonIn(g::fromJson);
+        .withAudioHandler(new TkAudioHdl(cfg, send, (cfg0, flags, sequenceNumber, sMeter, rssi, rawData) -> {
+          log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, rssi, rawData.length);
+        }))
+        .withWaterfallHandler(new TkWaterfallHdl(send, (xBin, sequenceNumber, flags, rawWfData) -> {
+          log.info("bin: {} seqNo: {} flags: {} wfData: {}", xBin, sequenceNumber, flags, rawWfData.length);
+        }))
+        .withJsonIn(g::fromJson)
+        .withConfigPin(((kiwiConfig, dxConfig, dxCommConfig) -> {
+          for (var o : new Object[]{kiwiConfig, dxConfig, dxCommConfig}) {
+            if (o != null) {
+              log.info(g.toJson(o));
+            }
+          }
+        }));
 
       for (var msg : sndMessages) {
         if ("receive".equals(msg.type)) {
