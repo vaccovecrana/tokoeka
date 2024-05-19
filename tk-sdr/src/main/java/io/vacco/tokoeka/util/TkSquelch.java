@@ -13,7 +13,7 @@ public class TkSquelch {
   public double threshold;
 
   private TkSquelchPin pin;
-  private final long fallOffTimeMs;
+  private final long tailTimeMs;
 
   private long    lastSignalTime = 0;
   private boolean squelchOpen = false;
@@ -24,9 +24,9 @@ public class TkSquelch {
   private int     noiseFloorCount = 0;
   private double  noiseFloorMultiplier = 1.00;
 
-  public TkSquelch(double threshold, double fallOffSeconds) {
+  public TkSquelch(double threshold, long tailTimeMs) {
     this.threshold = threshold;
-    this.fallOffTimeMs = (long) (fallOffSeconds * 1000);
+    this.tailTimeMs = tailTimeMs;
   }
 
   public void processAudio(byte[] pcm) {
@@ -44,7 +44,7 @@ public class TkSquelch {
     if (signalAvg > threshold) {
       lastSignalTime = currentTime;
       squelchOpen = true;
-    } else if ((currentTime - lastSignalTime) > fallOffTimeMs) {
+    } else if ((currentTime - lastSignalTime) > tailTimeMs) {
       if (squelchOpen && pin != null) {
         pin.onUpdate(false, pcm, signalAvg);
       }

@@ -44,7 +44,7 @@ public class TkSocketTest {
           }
         };
 
-        var squelch = new TkSquelch(0, 1.0).withPin((open, pcm, signalAvg) -> {
+        var squelch = new TkSquelch(0, 1000).withPin((open, pcm, signalAvg) -> {
           log.info(">>>> Squelch [open: {}, avg: {}]", open, signalAvg);
         });
         var latch = new CountDownLatch(1);
