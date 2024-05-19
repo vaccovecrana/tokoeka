@@ -131,6 +131,9 @@ public class TkCommand {
   }
 
   public static boolean isKiwiOk(String key, String value) {
+    if (key == null) { // not a control message
+      return true;
+    }
     var pOk = Objects.equals(key, badp) && Objects.equals(value, "0");
     var bus = Objects.equals(key, too_busy) && Objects.equals(value, "0");
     return pOk || bus;
