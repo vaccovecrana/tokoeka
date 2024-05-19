@@ -20,7 +20,7 @@ public class TkSocketTest {
 
   static {
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_DEVMODE, "true");
-    ShOption.setSysProp(ShOption.IO_VACCO_SHAX_LOGLEVEL, "info");
+    ShOption.setSysProp(ShOption.IO_VACCO_SHAX_LOGLEVEL, "debug");
   }
 
   private static final Logger log = LoggerFactory.getLogger(TkSocketTest.class);
@@ -57,7 +57,7 @@ public class TkSocketTest {
           }))
           .withControlPin((code, key, value, remote, e) -> {
             log.info("control event: {} [{}] [{}] {}", code, key, value, remote, e);
-            if (!TkCommand.isLoginOk(key, value)) {
+            if (!TkCommand.isKiwiOk(key, value)) {
               latch.countDown();
             }
           });

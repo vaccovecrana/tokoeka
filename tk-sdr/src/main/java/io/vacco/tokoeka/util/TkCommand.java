@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static io.vacco.tokoeka.schema.TkConstants.badp;
+import static io.vacco.tokoeka.schema.TkConstants.too_busy;
 import static io.vacco.tokoeka.util.TkPair.*;
 import static java.lang.String.format;
 
@@ -129,8 +130,10 @@ public class TkCommand {
     return set(ks("keepalive"));
   }
 
-  public static boolean isLoginOk(String key, String value) {
-    return Objects.equals(key, badp) && Objects.equals(value, "0");
+  public static boolean isKiwiOk(String key, String value) {
+    var pOk = Objects.equals(key, badp) && Objects.equals(value, "0");
+    var bus = Objects.equals(key, too_busy) && Objects.equals(value, "0");
+    return pOk || bus;
   }
 
 }
