@@ -80,12 +80,15 @@ public class TkAudioHdl {
 
     if (buffer.hasRemaining()) {
       buffer.order(ByteOrder.LITTLE_ENDIAN);
-      var rawPcm = new byte[buffer.remaining()];
-      buffer.get(rawPcm);
+      byte[] audio = new byte[buffer.remaining()], imaPcm = null, rawPcm;
+      buffer.get(audio);
       if (config.compression) {
-        rawPcm = adPcm.decode(rawPcm);
+        imaPcm = audio;
+        rawPcm = adPcm.decode(audio);
+      } else {
+        rawPcm = audio;
       }
-      audioPin.onAudio((int) config.sampleRate, flags, sequenceNumber, sMeter, rssi, rawPcm);
+      audioPin.onAudio((int) config.sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm);
     }
 
     counter.update();
