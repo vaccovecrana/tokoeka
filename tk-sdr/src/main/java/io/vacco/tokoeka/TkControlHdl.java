@@ -75,10 +75,10 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
       case "rx_chans":        this.config.rx_chans = parseInt(value); break;
       case "audio_rate":      if (this.audioHdl != null) this.audioHdl.onAudioRate(parseInt(value)); break;
       case "sample_rate":     if (this.audioHdl != null) this.audioHdl.onSampleRate(parseDouble(value)); break;
-      case "load_cfg":        if (this.jsonIn != null) this.kiwiConfig = loadKiwiConfig(value, jsonIn); break;
-      case "load_dxcfg":      if (this.jsonIn != null) this.dxConfig = loadKiwiDxConfig(value, jsonIn); break;
-      case "load_dxcomm_cfg": if (this.jsonIn != null) this.dxCommConfig = loadKiwiDxConfig(value, jsonIn); break;
-      case "cfg_loaded":      if (this.configPin != null) this.configPin.onConfig(kiwiConfig, dxConfig, dxCommConfig); break;
+      case load_cfg:          if (this.jsonIn != null) this.kiwiConfig = loadKiwiConfig(value, jsonIn); break;
+      case load_dxcfg:        if (this.jsonIn != null) this.dxConfig = loadKiwiDxConfig(value, jsonIn); break;
+      case load_dxcomm_cfg:   if (this.jsonIn != null) this.dxCommConfig = loadKiwiDxConfig(value, jsonIn); break;
+      case cfg_loaded:        if (this.configPin != null) this.configPin.onConfig(kiwiConfig, dxConfig, dxCommConfig); break;
       case badp:
       case too_busy:
       case redirect:

@@ -8,6 +8,8 @@ public class TkConstants {
     MSG = "MSG", SND = "SND", WF = "W/F";
 
   public static final String
-    badp = "badp", too_busy = "too_busy", redirect = "redirect", down = "down";
+    badp = "badp", too_busy = "too_busy", redirect = "redirect", down = "down",
+    load_cfg = "load_cfg", load_dxcfg = "load_dxcfg", load_dxcomm_cfg = "load_dxcomm_cfg",
+    cfg_loaded = "cfg_loaded";
 
 }
