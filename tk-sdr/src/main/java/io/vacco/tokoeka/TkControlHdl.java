@@ -2,12 +2,9 @@ package io.vacco.tokoeka;
 
 import io.vacco.tokoeka.schema.dx.TkDxConfig;
 import io.vacco.tokoeka.schema.kiwi.TkKiwiConfig;
-import io.vacco.tokoeka.spi.TkConfigPin;
-import io.vacco.tokoeka.spi.TkControlPin;
-import io.vacco.tokoeka.spi.TkJsonIn;
+import io.vacco.tokoeka.spi.*;
 import io.vacco.tokoeka.schema.TkConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
@@ -62,27 +59,27 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
 
   private void processKeyValue(String key, String value) {
     switch (key) {
-      case "last_community_download": log.info(URLDecoder.decode(value, StandardCharsets.UTF_8)); break;
-      case "bandwidth":       this.config.frequencyMax = parseDouble(value); break;
-      case "version_maj":     this.config.kiwiMajor = parseInt(value); break;
-      case "version_min":     this.config.kiwiMinor = parseInt(value); break;
-      case "freq_offset":     this.config.frequencyOffset = parseDouble(value); break;
-      case "debian_ver":      this.config.debian_ver = value; break;
-      case "model":           this.config.model = value; break;
-      case "platform":        this.config.platform = value; break;
-      case "ext_clk":         this.config.ext_clk = value; break;
-      case "abyy":            this.config.abyy = value; break;
-      case "rx_chans":        this.config.rx_chans = parseInt(value); break;
-      case "audio_rate":      if (this.audioHdl != null) this.audioHdl.onAudioRate(parseInt(value)); break;
-      case "sample_rate":     if (this.audioHdl != null) this.audioHdl.onSampleRate(parseDouble(value)); break;
-      case load_cfg:          if (this.jsonIn != null) this.kiwiConfig = loadKiwiConfig(value, jsonIn); break;
-      case load_dxcfg:        if (this.jsonIn != null) this.dxConfig = loadKiwiDxConfig(value, jsonIn); break;
-      case load_dxcomm_cfg:   if (this.jsonIn != null) this.dxCommConfig = loadKiwiDxConfig(value, jsonIn); break;
-      case cfg_loaded:        if (this.configPin != null) this.configPin.onConfig(kiwiConfig, dxConfig, dxCommConfig); break;
+      case last_community_download: log.info(URLDecoder.decode(value, StandardCharsets.UTF_8)); break;
+      case bandwidth:       this.config.frequencyMax = parseDouble(value); break;
+      case version_maj:     this.config.kiwiMajor = parseInt(value); break;
+      case version_min:     this.config.kiwiMinor = parseInt(value); break;
+      case freq_offset:     this.config.frequencyOffset = parseDouble(value); break;
+      case debian_ver:      this.config.debian_ver = value; break;
+      case model:           this.config.model = value; break;
+      case platform:        this.config.platform = value; break;
+      case ext_clk:         this.config.ext_clk = value; break;
+      case abyy:            this.config.abyy = value; break;
+      case rx_chans:        this.config.rx_chans = parseInt(value); break;
+      case audio_rate:      if (this.audioHdl != null) this.audioHdl.onAudioRate(parseInt(value)); break;
+      case sample_rate:     if (this.audioHdl != null) this.audioHdl.onSampleRate(parseDouble(value)); break;
+      case load_cfg:        if (this.jsonIn != null) this.kiwiConfig = loadKiwiConfig(value, jsonIn); break;
+      case load_dxcfg:      if (this.jsonIn != null) this.dxConfig = loadKiwiDxConfig(value, jsonIn); break;
+      case load_dxcomm_cfg: if (this.jsonIn != null) this.dxCommConfig = loadKiwiDxConfig(value, jsonIn); break;
+      case cfg_loaded:      if (this.configPin != null) this.configPin.onConfig(kiwiConfig, dxConfig, dxCommConfig); break;
       case badp:
       case too_busy:
       case redirect:
-      case down:              controlEvent(key, value, true, null); break;
+      case down:            controlEvent(key, value, true, null); break;
       default:
         if (log.isDebugEnabled()) {
           log.debug("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());

@@ -35,7 +35,7 @@ public class TkAudioHdl {
     tx.accept(setGenMix(0, -1)); // TODO map to config
     tx.accept(setModulation(
         config.modulation,
-        removeFreqOffset(config.frequency, config.frequencyOffset, config.frequencyMax))
+        removeFreqOffset(config.frequencyKHz, config.frequencyOffset, config.frequencyMax))
     );
     tx.accept(setAGC(
         config.agcOn, config.agcHang, config.agcThresh,

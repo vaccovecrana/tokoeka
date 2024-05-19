@@ -68,7 +68,7 @@ public class TkSocketTest {
         cfg.username = "kiwi";
         cfg.identUser = "tokoeka";
         cfg.modulation = TkModulation.usb;
-        cfg.frequency = 14265;
+        cfg.frequencyKHz = 14265;
         cfg.compression = true;
 
         cfg.agcOn = false;

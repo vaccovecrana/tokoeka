@@ -12,7 +12,7 @@ public class TkConfig {
   public int sampleRateOut = 44100;
   public double sampleRate;
 
-  public double frequency, frequencyOffset = 0.0, frequencyMax = 30e3;
+  public double frequencyKHz, frequencyOffset = 0.0, frequencyMax = 30e3;
 
   public boolean agcOn, agcHang;
   public int     agcThresh, agcSlope, agcDecay, agcGain;
