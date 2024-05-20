@@ -9,18 +9,18 @@ public class TkSquelch {
   private double threshold;
   private TkSquelchPin pin;
   private final long tailTimeMs;
-  private final double smoothingFactor;
 
   private long lastSignalTime = 0;
   private boolean squelchOpen = false;
 
   private final double nfMultiplier;
+  private final double nfSmoothingFactor;
   private double nfAverage = 0; // noise floor average
   private boolean isFirstSample = true;
 
-  public TkSquelch(long tailTimeMs, double smoothingFactor, double nfMultiplier) {
+  public TkSquelch(long tailTimeMs, double nfSmoothingFactor, double nfMultiplier) {
     this.tailTimeMs = tailTimeMs;
-    this.smoothingFactor = smoothingFactor;
+    this.nfSmoothingFactor = nfSmoothingFactor;
     this.nfMultiplier = nfMultiplier;
   }
 
@@ -49,7 +49,7 @@ public class TkSquelch {
       nfAverage = signalAvg;
       isFirstSample = false;
     } else {
-      nfAverage = smoothingFactor * signalAvg + (1 - smoothingFactor) * nfAverage;
+      nfAverage = nfSmoothingFactor * signalAvg + (1 - nfSmoothingFactor) * nfAverage;
     }
     threshold = nfAverage * nfMultiplier;
   }
