@@ -6,22 +6,17 @@ import static io.vacco.tokoeka.util.TkAudio.signalAverageOf;
 
 public class TkSquelch {
 
+  private final TkSquelchParams params;
+
   private double threshold;
   private TkSquelchPin pin;
-  private final long tailTimeMs;
-
   private long lastSignalTime = 0;
   private boolean squelchOpen = false;
-
-  private final double nfMultiplier;
-  private final double nfSmoothingFactor;
   private double nfAverage = 0; // noise floor average
   private boolean isFirstSample = true;
 
-  public TkSquelch(long tailTimeMs, double nfSmoothingFactor, double nfMultiplier) {
-    this.tailTimeMs = tailTimeMs;
-    this.nfSmoothingFactor = nfSmoothingFactor;
-    this.nfMultiplier = nfMultiplier;
+  public TkSquelch(TkSquelchParams params) {
+    this.params = Objects.requireNonNull(params);
   }
 
   public void processAudio(byte[] pcm) {
@@ -31,7 +26,7 @@ public class TkSquelch {
     if (signalAvg > threshold) {
       lastSignalTime = currentTime;
       squelchOpen = true;
-    } else if ((currentTime - lastSignalTime) > tailTimeMs) {
+    } else if ((currentTime - lastSignalTime) > params.tailTimeMs) {
       if (squelchOpen && pin != null) {
         pin.onUpdate(false, pcm, signalAvg, threshold);
       }
@@ -49,9 +44,9 @@ public class TkSquelch {
       nfAverage = signalAvg;
       isFirstSample = false;
     } else {
-      nfAverage = nfSmoothingFactor * signalAvg + (1 - nfSmoothingFactor) * nfAverage;
+      nfAverage = params.nfSmoothingFactor * signalAvg + (1 - params.nfSmoothingFactor) * nfAverage;
     }
-    threshold = nfAverage * nfMultiplier;
+    threshold = nfAverage * params.nfMultiplier;
   }
 
   public TkSquelch withPin(TkSquelchPin pin) {
