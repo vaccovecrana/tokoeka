@@ -34,7 +34,7 @@ public class TkSocketTest {
         // 80m.live:8078
         // hb9bxewebsdr.ddns.net:8073
         // bclinfo.ddns.net:8073 - 13750kHz, 594kHz, 1600kHz
-        var uri = new URI("ws://173.48.189.54:8074/12287283/SND"); // This looks like a session ID
+        var uri = new URI("ws://21331.proxy.kiwisdr.com:8073/12287283/SND"); // This looks like a session ID
         var cfg = new TkConfig();
         var sock = new TkSocket(uri);
         var send = (Consumer<String>) (s) -> {
@@ -44,9 +44,8 @@ public class TkSocketTest {
           }
         };
 
-        var squelch = new TkSquelch(0, 1000).withPin((open, pcm, signalAvg) -> {
-          log.info(">>>> Squelch [open: {}, avg: {}]", open, signalAvg);
-        });
+        var squelch = new TkSquelch(2500, 0.025, 1.5)
+          .withPin((open, pcm, signalAvg, signalThr) -> log.info(">>>> Squelch [open: {}, avg: {}, thr: {}]", open, signalAvg, signalThr));
         var latch = new CountDownLatch(1);
         var player = new TkAudioPlayer(16, 1);
         var ctlHdl = new TkControlHdl(cfg, send)
@@ -57,18 +56,17 @@ public class TkSocketTest {
           }))
           .withControlPin((code, key, value, remote, e) -> {
             log.info("control event: {} [{}] [{}] {}", code, key, value, remote, e);
-            if (!TkCommand.isKiwiOk(key, value)) {
+            if (!TkCommand.isKiwiOk(key, value) || code == 1006) {
               latch.countDown();
             }
           });
 
         sock.withHandler(ctlHdl);
-        squelch.detectNoiseFloor(4500, 2);
 
         cfg.username = "kiwi";
         cfg.identUser = "tokoeka";
         cfg.modulation = TkModulation.usb;
-        cfg.frequencyKHz = 14265;
+        cfg.frequencyKHz = 13354;
         cfg.compression = true;
 
         cfg.agcOn = false;
@@ -76,7 +74,7 @@ public class TkSocketTest {
         cfg.agcThresh = -100;
         cfg.agcSlope = 6;
         cfg.agcDecay = 1000;
-        cfg.agcGain = 65;
+        cfg.agcGain = 75;
 
         cfg.nrAlgoId = 3;
         cfg.nrSpecAlpha = 0.95;
@@ -84,7 +82,7 @@ public class TkSocketTest {
         cfg.nrSpecActiveSnr = 1000;
 
         sock.connectBlocking();
-        log.info("{}", latch.await(20, TimeUnit.SECONDS));
+        log.info("{}", latch.await(5, TimeUnit.MINUTES));
         sock.closeBlocking();
         player.close();
       } else {
