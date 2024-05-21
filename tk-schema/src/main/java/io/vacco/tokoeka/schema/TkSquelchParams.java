@@ -1,4 +1,4 @@
-package io.vacco.tokoeka.util;
+package io.vacco.tokoeka.schema;
 
 public class TkSquelchParams {
 

@@ -1,5 +1,6 @@
 package io.vacco.tokoeka.util;
 
+import io.vacco.tokoeka.schema.TkSquelchParams;
 import io.vacco.tokoeka.spi.TkSquelchPin;
 import java.util.Objects;
 import static io.vacco.tokoeka.util.TkAudio.signalAverageOf;
