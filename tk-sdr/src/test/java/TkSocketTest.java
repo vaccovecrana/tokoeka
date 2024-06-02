@@ -44,7 +44,7 @@ public class TkSocketTest {
           }
         };
 
-        var sqParams = TkSquelchParams.of(2500, 0.025, 1.5);
+        var sqParams = TkSquelchParams.of(2500, 2.0);
         var squelch = new TkSquelch(sqParams)
           .withPin((open, pcm, signalAvg, signalThr) -> log.info(">>>> Squelch [open: {}, avg: {}, thr: {}]", open, signalAvg, signalThr));
         var latch = new CountDownLatch(1);
@@ -75,7 +75,7 @@ public class TkSocketTest {
         cfg.agcThresh = -100;
         cfg.agcSlope = 6;
         cfg.agcDecay = 1000;
-        cfg.agcGain = 75;
+        cfg.agcGain = 70;
 
         cfg.nrAlgoId = 3;
         cfg.nrSpecAlpha = 0.95;
