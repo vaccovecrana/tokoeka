@@ -2,6 +2,8 @@ package io.vacco.tokoeka.util;
 
 import io.vacco.tokoeka.schema.TkSquelchParams;
 import io.vacco.tokoeka.spi.TkSquelchPin;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import static io.vacco.tokoeka.util.TkAudio.signalAverageOf;
 
@@ -13,8 +15,7 @@ public class TkSquelch {
   private TkSquelchPin pin;
   private long lastSignalTime = 0;
   private boolean squelchOpen = false;
-  private double nfAverage = 0; // noise floor average
-  private boolean isFirstSample = true;
+  private final Map<Integer, Long> noiseHistogram = new HashMap<>();
 
   public TkSquelch(TkSquelchParams params) {
     this.params = Objects.requireNonNull(params);
@@ -41,17 +42,23 @@ public class TkSquelch {
   }
 
   private void updateNoiseFloor(double signalAvg) {
-    if (isFirstSample) {
-      nfAverage = signalAvg;
-      isFirstSample = false;
-    } else {
-      nfAverage = params.nfSmoothingFactor * signalAvg + (1 - params.nfSmoothingFactor) * nfAverage;
+    int signalBin = (int) signalAvg;
+    noiseHistogram.put(signalBin, noiseHistogram.getOrDefault(signalBin, 0L) + 1);
+    int mostFrequentBin = signalBin;
+    long maxCount = 0;
+    for (var e : noiseHistogram.entrySet()) {
+      if (e.getValue() > maxCount) {
+        maxCount = e.getValue();
+        mostFrequentBin = e.getKey();
+      }
     }
-    threshold = nfAverage * params.nfMultiplier;
+    threshold = mostFrequentBin * params.nfMultiplier;
   }
 
   public TkSquelch withPin(TkSquelchPin pin) {
     this.pin = Objects.requireNonNull(pin);
     return this;
   }
+
 }
+
