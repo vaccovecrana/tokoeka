@@ -2,10 +2,10 @@ name: Gradle Build
 on: {push: {tags: null}}
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: vaccovecrana/gitflow-oss-java-slim@0.9.9
+      - uses: vaccovecrana/gitflow-oss-java-slim@feature/1.0.0
         with:
           orgConfig: https://vacco-oss.s3.us-east-2.amazonaws.com/vacco-oss.json
         env:
