@@ -57,7 +57,10 @@ public class TkSocketTest {
           }))
           .withControlPin((code, key, value, remote, e) -> {
             log.info("control event: {} [{}] [{}] {}", code, key, value, remote, e);
-            if (!TkCommand.isKiwiOk(key, value) || code == 1006) {
+            var isError = code > 1000
+              || (value != null && value.equals("Operation timed out"))
+              || (code == -1 && key == null && value == null && !remote);
+            if (isError) {
               latch.countDown();
             }
           });

@@ -2,12 +2,9 @@ package io.vacco.tokoeka.util;
 
 import io.vacco.tokoeka.schema.TkModulation;
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static io.vacco.tokoeka.schema.TkConstants.badp;
-import static io.vacco.tokoeka.schema.TkConstants.too_busy;
 import static io.vacco.tokoeka.util.TkPair.*;
 import static java.lang.String.format;
 
@@ -128,13 +125,6 @@ public class TkCommand {
 
   public static String setKeepAlive() {
     return set(ks("keepalive"));
-  }
-
-  public static boolean isKiwiOk(String key, String value) {
-    if (key == null) { // not a control message
-      return true;
-    }
-    return Objects.equals(key, badp) && Objects.equals(value, "0");
   }
 
 }
