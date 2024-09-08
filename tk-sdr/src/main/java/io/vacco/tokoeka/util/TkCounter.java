@@ -20,4 +20,10 @@ public class TkCounter {
       k = 0;
     }
   }
+
+  public static boolean nowMsDiffLt(long t0, long diffMs) {
+    var tN = System.currentTimeMillis();
+    return (tN - t0) < diffMs;
+  }
+
 }

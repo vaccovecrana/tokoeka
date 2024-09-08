@@ -1,11 +1,11 @@
-package io.vacco.tokoeka.util;
+package io.vacco.tokoeka.audio;
 
 import io.vacco.tokoeka.schema.TkSquelchParams;
 import io.vacco.tokoeka.spi.TkSquelchPin;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import static io.vacco.tokoeka.util.TkAudio.signalAverageOf;
+import static io.vacco.tokoeka.audio.TkAudio.signalAverageOf;
 
 public class TkSquelch {
 
@@ -30,12 +30,12 @@ public class TkSquelch {
       squelchOpen = true;
     } else if ((currentTime - lastSignalTime) > params.tailTimeMs) {
       if (squelchOpen && pin != null) {
-        pin.onUpdate(false, pcm, signalAvg, threshold);
+        pin.onSquelch(false, pcm, signalAvg, threshold);
       }
       squelchOpen = false;
     }
     if (squelchOpen && pin != null) {
-      pin.onUpdate(true, pcm, signalAvg, threshold);
+      pin.onSquelch(true, pcm, signalAvg, threshold);
     }
 
     updateNoiseFloor(signalAvg);

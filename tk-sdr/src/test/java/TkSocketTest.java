@@ -1,18 +1,18 @@
 import io.vacco.shax.logging.ShOption;
-import io.vacco.tokoeka.*;
+import io.vacco.tokoeka.TkSocket;
+import io.vacco.tokoeka.audio.*;
+import io.vacco.tokoeka.handler.TkAudioHdl;
+import io.vacco.tokoeka.handler.TkControlHdl;
 import io.vacco.tokoeka.schema.*;
-import io.vacco.tokoeka.util.*;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
 import org.slf4j.*;
 
 import java.awt.*;
-import java.net.URI;
-import java.util.concurrent.*;
-import java.util.function.Consumer;
 
 import static j8spec.J8Spec.*;
+import static io.vacco.tokoeka.util.TkCounter.nowMsDiffLt;
 
 @DefinedOrder
 @RunWith(J8SpecRunner.class)
@@ -34,23 +34,20 @@ public class TkSocketTest {
         // 80m.live:8078
         // hb9bxewebsdr.ddns.net:8073
         // bclinfo.ddns.net:8073 - 13750kHz, 594kHz, 1600kHz
-        var uri = new URI("ws://21331.proxy.kiwisdr.com:8073/12287283/SND"); // This looks like a session ID
-        var cfg = new TkConfig();
-        var sock = new TkSocket(uri);
-        var send = (Consumer<String>) (s) -> {
-          if (sock.isOpen()) {
-            log.info(s);
-            sock.send(s);
-          }
-        };
 
-        var sqParams = TkSquelchParams.of(2500, 2.0);
+        var sock = new TkSocket("sdr.hfunderground.com", 8074, "/12287283/SND", false, 3000);
+        var cfg = new TkConfig();
+        var sqParams = TkSquelchParams.of(2500, 4.0);
         var squelch = new TkSquelch(sqParams)
           .withPin((open, pcm, signalAvg, signalThr) -> log.info(">>>> Squelch [open: {}, avg: {}, thr: {}]", open, signalAvg, signalThr));
-        var latch = new CountDownLatch(1);
         var player = new TkAudioPlayer(16, 1);
-        var ctlHdl = new TkControlHdl(cfg, send)
-          .withAudioHandler(new TkAudioHdl(cfg, send, (sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
+
+        var go = new boolean[] { true };
+        var nowMs = System.currentTimeMillis();
+
+        var ctlHdl = new TkControlHdl(cfg)
+          .withSink(sock)
+          .withAudioHandler(new TkAudioHdl(cfg, sock, (sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
             log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, String.format("%6.2f", rssi), rawPcm.length);
             squelch.processAudio(rawPcm);
             player.play(sampleRate, rawPcm);
@@ -61,7 +58,7 @@ public class TkSocketTest {
               || (value != null && value.equals("Operation timed out"))
               || (code == -1 && key == null && value == null && !remote);
             if (isError) {
-              latch.countDown();
+              go[0] = false;
             }
           });
 
@@ -85,9 +82,8 @@ public class TkSocketTest {
         cfg.nrSpecGain = 1;
         cfg.nrSpecActiveSnr = 1000;
 
-        sock.connectBlocking();
-        log.info("{}", latch.await(5, TimeUnit.MINUTES));
-        sock.closeBlocking();
+        sock.connect().listen(() -> go[0] && nowMsDiffLt(nowMs, 120_000));
+        sock.close();
         player.close();
       } else {
         log.info("CI/CD build. Stopping.");

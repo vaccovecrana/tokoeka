@@ -1,4 +1,4 @@
-package io.vacco.tokoeka;
+package io.vacco.tokoeka.handler;
 
 import io.vacco.tokoeka.schema.dx.TkDxConfig;
 import io.vacco.tokoeka.schema.kiwi.TkKiwiConfig;
@@ -9,7 +9,6 @@ import org.slf4j.*;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 import static io.vacco.tokoeka.schema.TkConstants.*;
@@ -17,43 +16,31 @@ import static io.vacco.tokoeka.util.TkCommand.*;
 import static io.vacco.tokoeka.util.TkFormat.*;
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
+import static java.util.Objects.requireNonNull;
 
-public class TkControlHdl implements Consumer<ByteBuffer> {
+public class TkControlHdl implements TkSocketHdl {
 
   private static final Logger log = LoggerFactory.getLogger(TkControlHdl.class);
 
   private final TkConfig config;
-  private final Consumer<String> tx;
 
-  private TkAudioHdl      audioHdl;
-  private TkWaterfallHdl  waterfallHdl;
-  private TkJsonIn        jsonIn;
-  private TkConfigPin     configPin;
-  protected TkControlPin  controlPin;
+  private Consumer<String>  tx;
+  private TkAudioHdl        audioHdl;
+  private TkWaterfallHdl    waterfallHdl;
+  private TkJsonIn          jsonIn;
+  private TkConfigPin       configPin;
+  protected TkControlPin    controlPin;
 
   public TkKiwiConfig kiwiConfig;
-  public TkDxConfig dxConfig, dxCommConfig;
+  public TkDxConfig   dxConfig, dxCommConfig;
 
-  public TkControlHdl(TkConfig config, Consumer<String> tx) {
-    this.config = Objects.requireNonNull(config);
-    this.tx = Objects.requireNonNull(tx);
+  public TkControlHdl(TkConfig config) {
+    this.config = requireNonNull(config);
   }
 
-  private void processAudio(ByteBuffer data) {
-    if (this.audioHdl != null) {
-      this.audioHdl.processAudio(data);
-    }
-  }
-
-  private void processWaterfall(ByteBuffer data) {
-    if (this.waterfallHdl != null) {
-      this.waterfallHdl.processWaterfall(data);
-    }
-  }
-
-  private void controlEvent(String key, String value, boolean remote, Exception e) {
+  public void controlEvent(int wsCode, String key, String value, boolean remote, Exception e) {
     if (this.controlPin != null) {
-      this.controlPin.onEvent(-1, key, value, remote, e);
+      this.controlPin.onEvent(wsCode, key, value, remote, e);
     }
   }
 
@@ -79,7 +66,7 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
       case badp:
       case too_busy:
       case redirect:
-      case down:            controlEvent(key, value, true, null); break;
+      case down:            this.controlEvent(-1, key, value, true, null); break;
       default:
         if (log.isDebugEnabled()) {
           log.debug("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());
@@ -95,7 +82,27 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
     params.forEach(this::processKeyValue);
   }
 
-  @Override public void accept(ByteBuffer data) {
+  private void processAudio(ByteBuffer data) {
+    if (this.audioHdl != null) {
+      this.audioHdl.processAudio(data);
+    }
+  }
+
+  private void processWaterfall(ByteBuffer data) {
+    if (this.waterfallHdl != null) {
+      this.waterfallHdl.processWaterfall(data);
+    }
+  }
+
+  @Override public void onOpen(String handShake) {
+    if (tx == null) {
+      throw  new IllegalStateException("no tx sink, check handler configuration.");
+    }
+    tx.accept(setAuth(config.username, config.password));
+    tx.accept(setIdentity(config.identUser));
+  }
+
+  @Override public void onMessage(ByteBuffer data) {
     if (data == null || data.remaining() < 3) {
       log.error("No data, or received data is too short to contain a valid tag");
       return;
@@ -118,37 +125,47 @@ public class TkControlHdl implements Consumer<ByteBuffer> {
         default: log.warn("Unsupported message tag {} ({})", tag, data.remaining());
       }
     } catch (Exception e) {
-      controlEvent(null, null, false, e);
+      this.onError(e);
     }
   }
 
-  public void onAuth() {
-    tx.accept(setAuth(config.username, config.password));
-    tx.accept(setIdentity(config.identUser));
+  @Override public void onMessage(String message) {}
+
+  @Override public void onClose(int code) {
+    this.controlEvent(code, null, null, true, null);
+  }
+
+  @Override public void onError(Exception e) {
+    this.controlEvent(-1, null, null, false, e);
   }
 
   public TkControlHdl withAudioHandler(TkAudioHdl hdl) {
-    this.audioHdl = Objects.requireNonNull(hdl);
+    this.audioHdl = requireNonNull(hdl);
     return this;
   }
 
   public TkControlHdl withWaterfallHandler(TkWaterfallHdl hdl) {
-    this.waterfallHdl = Objects.requireNonNull(hdl);
+    this.waterfallHdl = requireNonNull(hdl);
     return this;
   }
 
   public TkControlHdl withJsonIn(TkJsonIn jsonIn) {
-    this.jsonIn = Objects.requireNonNull(jsonIn);
+    this.jsonIn = requireNonNull(jsonIn);
     return this;
   }
 
   public TkControlHdl withControlPin(TkControlPin pin) {
-    this.controlPin = Objects.requireNonNull(pin);
+    this.controlPin = requireNonNull(pin);
     return this;
   }
 
   public TkControlHdl withConfigPin(TkConfigPin pin) {
-    this.configPin = Objects.requireNonNull(pin);
+    this.configPin = requireNonNull(pin);
+    return this;
+  }
+
+  public TkControlHdl withSink(Consumer<String> tx) {
+    this.tx = requireNonNull(tx);
     return this;
   }
 

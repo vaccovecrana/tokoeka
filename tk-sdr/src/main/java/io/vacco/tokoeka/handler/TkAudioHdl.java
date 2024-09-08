@@ -1,5 +1,6 @@
-package io.vacco.tokoeka;
+package io.vacco.tokoeka.handler;
 
+import io.vacco.tokoeka.audio.TkAdpcm;
 import io.vacco.tokoeka.schema.TkConfig;
 import io.vacco.tokoeka.spi.TkAudioPin;
 import io.vacco.tokoeka.util.*;
@@ -8,7 +9,7 @@ import java.nio.*;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import static io.vacco.tokoeka.util.TkAudio.*;
+import static io.vacco.tokoeka.audio.TkAudio.*;
 import static io.vacco.tokoeka.util.TkCommand.*;
 
 public class TkAudioHdl {
