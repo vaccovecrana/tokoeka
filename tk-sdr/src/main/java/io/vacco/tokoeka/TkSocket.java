@@ -47,6 +47,7 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
       this.socketHdl.onOpen(hs);
       return this;
     } catch (Exception e) {
+      this.socketHdl.onError(e);
       throw new IllegalStateException("ws connection open failed", e);
     }
   }
