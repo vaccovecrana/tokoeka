@@ -1,3 +1,5 @@
+package io.vacco.tokoeka;
+
 import io.vacco.tokoeka.audio.TkNormalize;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;

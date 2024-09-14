@@ -69,7 +69,10 @@ public class TkControlHdl implements TkSocketHdl {
       case down:            this.controlEvent(-1, key, value, true, null); break;
       default:
         if (log.isDebugEnabled()) {
-          var val = value == null ? "" : String.format("%s...", value.trim().substring(0, 64));
+          var val = value == null ? "" : value.trim();
+          if (val.length() > 64) {
+            val = String.format("%s...", val.substring(0, 64));
+          }
           log.debug("Unknown message key/value: {} -> {}", key, val);
         }
     }
@@ -77,8 +80,8 @@ public class TkControlHdl implements TkSocketHdl {
 
   private void processMsg(String body) {
     var params = parseParameters(body);
-    if (log.isDebugEnabled()) {
-      log.debug(">> {} {} {}", MSG, body, params);
+    if (log.isTraceEnabled()) {
+      log.trace(">> {} {} {}", MSG, body, params);
     }
     params.forEach(this::processKeyValue);
   }

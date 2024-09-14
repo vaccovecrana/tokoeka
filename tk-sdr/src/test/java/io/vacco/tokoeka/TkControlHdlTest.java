@@ -1,5 +1,6 @@
+package io.vacco.tokoeka;
+
 import com.google.gson.Gson;
-import io.vacco.shax.logging.ShOption;
 import io.vacco.tokoeka.handler.*;
 import io.vacco.tokoeka.schema.*;
 import j8spec.annotation.DefinedOrder;
@@ -13,18 +14,17 @@ import java.util.*;
 import java.util.function.Consumer;
 
 import static j8spec.J8Spec.*;
+import static io.vacco.tokoeka.TkLogging.initLog;
 
 @DefinedOrder
 @RunWith(J8SpecRunner.class)
 public class TkControlHdlTest {
 
-  private static final Gson g = new Gson();
-
   static {
-    ShOption.setSysProp(ShOption.IO_VACCO_SHAX_DEVMODE, "true");
-    ShOption.setSysProp(ShOption.IO_VACCO_SHAX_LOGLEVEL, "debug");
+    initLog();
   }
 
+  private static final Gson g = new Gson();
   private static final Logger log = LoggerFactory.getLogger(TkControlHdlTest.class);
 
   static {

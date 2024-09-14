@@ -1,3 +1,5 @@
+package io.vacco.tokoeka;
+
 public class WsMsg {
 
   public String type;
@@ -8,4 +10,5 @@ public class WsMsg {
   @Override public String toString() {
     return String.format("%.4f %d %s (%d)", time, opcode, type, data.length());
   }
+
 }

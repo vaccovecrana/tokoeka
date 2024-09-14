@@ -88,8 +88,8 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
       frame.write(payload);
       outputStream.write(frame.toByteArray());
       outputStream.flush();
-      if (log.isDebugEnabled()) {
-        log.debug("< TXT: {} ({} bytes)", message, payload.length);
+      if (log.isTraceEnabled()) {
+        log.trace("< TXT: {} ({} bytes)", message, payload.length);
       }
     } catch (Exception e) {
       throw new IllegalStateException(String.format("unable to send text: %s", message), e);
