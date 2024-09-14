@@ -69,7 +69,8 @@ public class TkControlHdl implements TkSocketHdl {
       case down:            this.controlEvent(-1, key, value, true, null); break;
       default:
         if (log.isDebugEnabled()) {
-          log.debug("Unknown message key/value: {} -> {}", key, value == null ? "" : value.trim());
+          var val = value == null ? "" : String.format("%s...", value.trim().substring(0, 64));
+          log.debug("Unknown message key/value: {} -> {}", key, val);
         }
     }
   }

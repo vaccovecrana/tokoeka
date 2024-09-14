@@ -144,7 +144,8 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
               }
               this.socketHdl.onClose(closeCode);
             } else {
-              log.warn("Received close frame with no close code.");
+              log.trace("> CLOSE (?)");
+              throw new IllegalStateException("Received close frame with no close code.");
             }
             break;
           }
