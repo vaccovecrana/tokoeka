@@ -32,15 +32,19 @@ public class TkSockets {
     }
   }
 
-  public static String wsHandShakeOf(String endpoint) {
+  public static String wsHandShakeOf(String host, int port, String endpoint) {
     var wsKey = Base64.getEncoder().encodeToString(Double.toHexString(Math.random()).getBytes());
-    return "GET " + endpoint + " HTTP/1.1\r\n"
-      // + "Host: " + host + "\r\n" TODO do I need this?
+    var req =  "GET " + endpoint + " HTTP/1.1\r\n"
+      + "Host: " + String.format("%s:%d", host, port) + "\r\n"
       + "Upgrade: websocket\r\n"
       + "Connection: Upgrade\r\n"
       + "Sec-WebSocket-Key: " + wsKey + "\r\n"
       + "Sec-WebSocket-Version: 13\r\n"
       + "\r\n";
+    if (log.isTraceEnabled()) {
+      log.trace("ws request: {}", req);
+    }
+    return req;
   }
 
   public static void read(InputStream is, byte[] buff) {

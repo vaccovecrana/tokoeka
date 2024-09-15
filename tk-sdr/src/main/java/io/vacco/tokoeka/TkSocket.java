@@ -14,6 +14,8 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
 
   private static final Logger log = LoggerFactory.getLogger(TkSocket.class);
 
+  private final String  host;
+  private final int     port;
   private final String  endpoint;
   private final Socket  socket;
 
@@ -24,6 +26,8 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
   private final ByteArrayOutputStream accumulatedData = new ByteArrayOutputStream();
 
   public TkSocket(String host, int port, String endpoint, boolean secure, int timeout) {
+    this.host = requireNonNull(host);
+    this.port = port;
     this.endpoint = requireNonNull(endpoint);
     this.socket = createSocket(host, port, secure, timeout);
   }
@@ -32,7 +36,7 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
     try {
       outputStream = socket.getOutputStream();
       inputStream = socket.getInputStream();
-      outputStream.write(wsHandShakeOf(endpoint).getBytes());
+      outputStream.write(wsHandShakeOf(host, port, endpoint).getBytes());
       outputStream.flush();
       var reader = new BufferedReader(new InputStreamReader(inputStream));
       var bld = new StringBuilder();
