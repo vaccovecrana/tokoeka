@@ -16,9 +16,11 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
 
   private final String  host;
   private final int     port;
+  private final boolean secure;
+  private final int     timeout;
   private final String  endpoint;
-  private final Socket  socket;
 
+  private Socket        socket;
   private OutputStream  outputStream;
   private InputStream   inputStream;
   private TkSocketHdl   socketHdl;
@@ -28,12 +30,14 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
   public TkSocket(String host, int port, String endpoint, boolean secure, int timeout) {
     this.host = requireNonNull(host);
     this.port = port;
+    this.secure = secure;
+    this.timeout = timeout;
     this.endpoint = requireNonNull(endpoint);
-    this.socket = createSocket(host, port, secure, timeout);
   }
 
   public TkSocket connect() {
     try {
+      socket = createSocket(host, port, secure, timeout);
       outputStream = socket.getOutputStream();
       inputStream = socket.getInputStream();
       outputStream.write(wsHandShakeOf(host, port, endpoint).getBytes());
@@ -41,7 +45,10 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
       var reader = new BufferedReader(new InputStreamReader(inputStream));
       var bld = new StringBuilder();
       String line;
-      while (!(line = reader.readLine()).isEmpty()) {
+      while ((line = reader.readLine()) != null) {
+        if (line.isEmpty()) {
+          break;
+        }
         bld.append(line).append('\n');
       }
       var hs = bld.toString();
@@ -52,7 +59,7 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
       return this;
     } catch (Exception e) {
       this.socketHdl.onError(e);
-      throw new IllegalStateException("ws connection open failed", e);
+      throw new IllegalStateException("ws connection failed", e);
     }
   }
 

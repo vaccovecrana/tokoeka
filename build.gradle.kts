@@ -4,7 +4,7 @@ subprojects {
   apply(plugin = "io.vacco.oss.gitflow")
 
   group = "io.vacco.tokoeka"
-  version = "0.2.4"
+  version = "0.2.5"
 
   configure<io.vacco.oss.gitflow.GsPluginProfileExtension> {
     sharedLibrary(true, false)
