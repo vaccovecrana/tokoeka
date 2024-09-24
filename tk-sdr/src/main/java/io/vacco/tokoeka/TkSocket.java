@@ -103,7 +103,10 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
         log.trace("< TXT: {} ({} bytes)", message, payload.length);
       }
     } catch (Exception e) {
-      throw new IllegalStateException(String.format("unable to send text: %s", message), e);
+      var msg = message != null && message.length() > 64
+        ? String.format("%s...", message.substring(0, 64))
+        : message;
+      throw new IllegalStateException(String.format("unable to send text: %s", msg), e);
     }
   }
 
