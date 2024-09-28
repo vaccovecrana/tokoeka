@@ -43,6 +43,9 @@ public class TkSquelch {
 
   private void updateNoiseFloor(double signalAvg) {
     int signalBin = (int) signalAvg;
+    if (signalBin == 0) {
+      signalBin = 1;
+    }
     noiseHistogram.put(signalBin, noiseHistogram.getOrDefault(signalBin, 0L) + 1);
     int mostFrequentBin = signalBin;
     long maxCount = 0;

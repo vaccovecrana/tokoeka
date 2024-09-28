@@ -24,7 +24,6 @@ public class TkControlHdl implements TkSocketHdl {
 
   private final TkConfig config;
 
-  private Consumer<String>  tx;
   private TkAudioHdl        audioHdl;
   private TkWaterfallHdl    waterfallHdl;
   private TkJsonIn          jsonIn;
@@ -98,15 +97,12 @@ public class TkControlHdl implements TkSocketHdl {
     }
   }
 
-  @Override public void onOpen(String handShake) {
-    if (tx == null) {
-      throw  new IllegalStateException("no tx sink, check handler configuration.");
-    }
-    tx.accept(setAuth(config.username, config.password));
-    tx.accept(setIdentity(config.identUser));
+  @Override public void onOpen(TkConn conn, String handShake) {
+    conn.accept(setAuth(config.username, config.password));
+    conn.accept(setIdentity(config.identUser));
   }
 
-  @Override public void onMessage(ByteBuffer data) {
+  @Override public void onMessage(TkConn conn, ByteBuffer data) {
     if (data == null || data.remaining() < 3) {
       log.error("No data, or received data is too short to contain a valid tag");
       return;
@@ -129,17 +125,17 @@ public class TkControlHdl implements TkSocketHdl {
         default: log.warn("Unsupported message tag {} ({})", tag, data.remaining());
       }
     } catch (Exception e) {
-      this.onError(e);
+      this.onError(conn, e);
     }
   }
 
-  @Override public void onMessage(String message) {}
+  @Override public void onMessage(TkConn conn, String message) {}
 
-  @Override public void onClose(int code) {
-    this.controlEvent(code, null, null, true, null);
+  @Override public void onClose(TkConn conn, int code, boolean remote) {
+    this.controlEvent(code, null, null, remote, null);
   }
 
-  @Override public void onError(Exception e) {
+  @Override public void onError(TkConn conn, Exception e) {
     this.controlEvent(-1, null, null, false, e);
   }
 
@@ -165,11 +161,6 @@ public class TkControlHdl implements TkSocketHdl {
 
   public TkControlHdl withConfigPin(TkConfigPin pin) {
     this.configPin = requireNonNull(pin);
-    return this;
-  }
-
-  public TkControlHdl withSink(Consumer<String> tx) {
-    this.tx = requireNonNull(tx);
     return this;
   }
 

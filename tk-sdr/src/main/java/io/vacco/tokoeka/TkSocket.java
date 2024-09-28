@@ -1,38 +1,39 @@
 package io.vacco.tokoeka;
 
-import io.vacco.tokoeka.spi.TkSocketHdl;
+import io.vacco.tokoeka.spi.*;
+import io.vacco.tokoeka.util.*;
 import org.slf4j.*;
 import java.io.*;
 import java.net.Socket;
 import java.util.function.*;
 
-import static java.nio.ByteBuffer.wrap;
 import static java.util.Objects.requireNonNull;
 import static io.vacco.tokoeka.util.TkSockets.*;
 
-public class TkSocket implements AutoCloseable, Consumer<String> {
+public class TkSocket implements Closeable, Consumer<String> {
 
   private static final Logger log = LoggerFactory.getLogger(TkSocket.class);
 
-  private final String  host;
-  private final int     port;
-  private final boolean secure;
-  private final int     timeout;
-  private final String  endpoint;
+  private final String        host;
+  private final int           port;
+  private final boolean       secure;
+  private final int           timeout;
+  private final String        endpoint;
+  private final TkSocketState socketState;
 
   private Socket        socket;
   private OutputStream  outputStream;
   private InputStream   inputStream;
   private TkSocketHdl   socketHdl;
+  private TkConn        socketConn;
 
-  private final ByteArrayOutputStream accumulatedData = new ByteArrayOutputStream();
-
-  public TkSocket(String host, int port, String endpoint, boolean secure, int timeout) {
+  public TkSocket(String host, int port, String endpoint, boolean secure, int timeout, TkSocketState socketState) {
     this.host = requireNonNull(host);
     this.port = port;
     this.secure = secure;
     this.timeout = timeout;
     this.endpoint = requireNonNull(endpoint);
+    this.socketState = requireNonNull(socketState);
   }
 
   public TkSocket connect() {
@@ -42,134 +43,31 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
       inputStream = socket.getInputStream();
       outputStream.write(wsHandShakeOf(host, port, endpoint).getBytes());
       outputStream.flush();
-      var reader = new BufferedReader(new InputStreamReader(inputStream));
-      var bld = new StringBuilder();
-      String line;
-      while ((line = reader.readLine()) != null) {
-        if (line.isEmpty()) {
-          break;
-        }
-        bld.append(line).append('\n');
-      }
-      var hs = bld.toString();
-      if (!hs.contains("HTTP/1.1 101")) {
-        throw new IllegalStateException("ws connection handshake failed: " + hs);
-      }
-      this.socketHdl.onOpen(hs);
+      socketConn = new TkConnAdapter(
+        socket, socketState,
+        (msg) -> send(msg, outputStream),
+        (code, msg) -> sendClose(outputStream, code, msg)
+      );
+      socketHdl.onOpen(socketConn, wsClientHandShakeResponseOf(inputStream));
       return this;
     } catch (Exception e) {
-      this.socketHdl.onError(e);
+      socketHdl.onError(socketConn, e);
       throw new IllegalStateException("ws connection failed", e);
-    }
-  }
-
-  private void sendPong() throws IOException {
-    var pongFrame = new byte[2];
-    pongFrame[0] = (byte) 0x8A; // 0x8A = FIN + opcode 0xA (PONG)
-    outputStream.write(pongFrame);
-    outputStream.flush();
-    if (log.isTraceEnabled()) {
-      log.trace("< PONG");
-    }
-  }
-
-  public void send(String message) {
-    try {
-      var payload = message.getBytes();
-      var payloadLength = payload.length;
-      var frame = new ByteArrayOutputStream();
-      frame.write(0x81); // FIN + text frame opcode (0x1)
-      if (payloadLength <= 125) {
-        frame.write(payloadLength);
-      } else if (payloadLength <= 65535) {
-        frame.write(126);
-        frame.write((payloadLength >> 8) & 0xFF); // most significant byte
-        frame.write(payloadLength & 0xFF);        // least significant byte
-      } else {
-        frame.write(127);  // 8-byte payload length
-        // For large payloads (>65535 bytes), write the 8-byte length
-        // First four bytes should be zeros (per WebSocket protocol)
-        frame.write(0); frame.write(0); frame.write(0); frame.write(0);
-        // Write the last four bytes of the payload length
-        frame.write((payloadLength >> 24) & 0xFF); // most significant byte
-        frame.write((payloadLength >> 16) & 0xFF);
-        frame.write((payloadLength >> 8) & 0xFF);
-        frame.write(payloadLength & 0xFF);         // least significant byte
-      }
-      frame.write(payload);
-      outputStream.write(frame.toByteArray());
-      outputStream.flush();
-      if (log.isTraceEnabled()) {
-        log.trace("< TXT: {} ({} bytes)", message, payload.length);
-      }
-    } catch (Exception e) {
-      var msg = message != null && message.length() > 64
-        ? String.format("%s...", message.substring(0, 64))
-        : message;
-      throw new IllegalStateException(String.format("unable to send text: %s", msg), e);
     }
   }
 
   public void listen(Supplier<Boolean> go) {
     while (go.get() && !socket.isClosed()) {
       try {
-        var frameHeader = new byte[2];
-        read(inputStream, frameHeader);
-        var isFinalFragment = (frameHeader[0] & 0x80) != 0; // Check if FIN bit is set
-        var opcode = frameHeader[0] & 0x0F;
-        var payloadLength = payloadLengthOf(frameHeader, inputStream);
-        var payload = new byte[payloadLength];
-        int bytesRead = 0;
-        while (bytesRead < payloadLength) {
-          int read = inputStream.read(payload, bytesRead, payloadLength - bytesRead);
-          if (read == -1) {
-            throw new IOException("unexpected end of stream");
-          }
-          bytesRead += read;
-        }
-        accumulatedData.write(payload);
-        if (isFinalFragment) {
-          var completeMessage = accumulatedData.toByteArray();
-          if (opcode == 0x1) {
-            var msg = new String(completeMessage);
-            if (log.isTraceEnabled()) {
-              log.trace("> TXT: {}", msg);
-            }
-            this.socketHdl.onMessage(msg);
-          } else if (opcode == 0x2) {
-            if (log.isTraceEnabled()) {
-              log.trace("> BIN ({})", completeMessage.length);
-            }
-            this.socketHdl.onMessage(wrap(completeMessage));
-          } else if (opcode == 0xA) {
-            if (log.isTraceEnabled()) {
-              log.trace("> PONG");
-            }
-          } else if (opcode == 0x9) {
-            if (log.isTraceEnabled()) {
-              log.trace("> PING");
-            }
-            sendPong();
-          } else if (opcode == 0x8) {
-            if (completeMessage.length >= 2) {
-              int closeCode = ((completeMessage[0] & 0xFF) << 8) | (completeMessage[1] & 0xFF);
-              if (log.isTraceEnabled()) {
-                log.trace("> CLOSE ({})", closeCode);
-              }
-              this.socketHdl.onClose(closeCode);
-            } else {
-              log.trace("> CLOSE (?)");
-              throw new IllegalStateException("Received close frame with no close code.");
-            }
-            break;
-          }
-          accumulatedData.reset();
+        var stop = handleMessage(socketHdl, socketState, socketConn, inputStream, outputStream);
+        if (stop) {
+          break;
         }
       } catch (Exception e) {
         if (log.isDebugEnabled()) {
           log.debug("ws message processing error", e);
         }
-        this.socketHdl.onError(e);
+        socketHdl.onError(socketConn, e);
         break;
       }
     }
@@ -177,7 +75,7 @@ public class TkSocket implements AutoCloseable, Consumer<String> {
   }
 
   @Override public void accept(String s) {
-    this.send(s);
+    send(s, this.outputStream);
   }
 
   @Override public void close() {

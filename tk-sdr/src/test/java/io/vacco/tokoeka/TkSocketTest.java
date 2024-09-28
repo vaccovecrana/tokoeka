@@ -3,6 +3,7 @@ package io.vacco.tokoeka;
 import io.vacco.tokoeka.audio.*;
 import io.vacco.tokoeka.handler.*;
 import io.vacco.tokoeka.schema.*;
+import io.vacco.tokoeka.util.TkSocketState;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
@@ -29,7 +30,8 @@ public class TkSocketTest {
       // hb9bxewebsdr.ddns.net:8073
       // bclinfo.ddns.net:8073 - 13750kHz, 594kHz, 1600kHz
 
-      var sock = new TkSocket("sdr.hfunderground.com", 8074, "/12287283/SND", false, 3000);
+      var state = TkSocketState.of(-1, 65536);
+      var sock = new TkSocket("sdr.hfunderground.com", 8074, "/12287283/SND", false, 3000, state);
       var cfg = new TkConfig();
       var sqParams = TkSquelchParams.of(2500, 4.0);
       var squelch = new TkSquelch(sqParams)
@@ -40,7 +42,6 @@ public class TkSocketTest {
       var nowMs = System.currentTimeMillis();
 
       var ctlHdl = new TkControlHdl(cfg)
-        .withSink(sock)
         .withAudioHandler(new TkAudioHdl(cfg, sock, (sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
           log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, String.format("%6.2f", rssi), rawPcm.length);
           squelch.processAudio(rawPcm);
@@ -77,7 +78,6 @@ public class TkSocketTest {
       cfg.nrSpecActiveSnr = 1000;
 
       sock.connect().listen(() -> go[0] && nowMsDiffLt(nowMs, 120_000));
-      sock.close();
       player.close();
     }));
   }

@@ -4,10 +4,10 @@ import java.nio.ByteBuffer;
 
 public interface TkSocketHdl {
 
-  void onOpen(String handShake);
-  void onMessage(String message);
-  void onMessage(ByteBuffer message);
-  void onClose(int code);
-  void onError(Exception e);
+  void onOpen(TkConn conn, String handShake);
+  void onMessage(TkConn conn, String msg);
+  void onMessage(TkConn conn, ByteBuffer msg);
+  void onClose(TkConn conn, int code, boolean remote);
+  void onError(TkConn conn, Exception e);
 
 }

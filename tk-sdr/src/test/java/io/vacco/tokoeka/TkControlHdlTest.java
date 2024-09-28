@@ -3,15 +3,17 @@ package io.vacco.tokoeka;
 import com.google.gson.Gson;
 import io.vacco.tokoeka.handler.*;
 import io.vacco.tokoeka.schema.*;
+import io.vacco.tokoeka.spi.TkConn;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
 import org.slf4j.*;
 
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.function.Consumer;
 
 import static j8spec.J8Spec.*;
 import static io.vacco.tokoeka.TkLogging.initLog;
@@ -37,12 +39,23 @@ public class TkControlHdlTest {
       var cfg = new TkConfig();
       cfg.modulation = TkModulation.am;
 
-      var send = (Consumer<String>) log::info;
-      var ctlHdl = new TkControlHdl(cfg).withSink(send)
-        .withAudioHandler(new TkAudioHdl(cfg, send, (cfg0, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
+      var conn = new TkConn() {
+        @Override public void accept(String s) { log.info(s); }
+        @Override public void setAttachment(Object attachment) {}
+        @Override public <T> T getAttachment() { return null; }
+        @Override public Socket getSocket() { return null; }
+        @Override public void close() {}
+        @Override public void close(int code) {}
+        @Override public void close(int code, String msg) {
+          log.info("close - [{}, {}]", code, msg);
+        }
+      };
+
+      var ctlHdl = new TkControlHdl(cfg)
+        .withAudioHandler(new TkAudioHdl(cfg, conn, (cfg0, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
           log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, rssi, rawPcm.length);
         }))
-        .withWaterfallHandler(new TkWaterfallHdl(send, (xBin, sequenceNumber, flags, rawWfData) -> {
+        .withWaterfallHandler(new TkWaterfallHdl(conn, (xBin, sequenceNumber, flags, rawWfData) -> {
           log.info("bin: {} seqNo: {} flags: {} wfData: {}", xBin, sequenceNumber, flags, rawWfData.length);
         }))
         .withJsonIn(g::fromJson)
@@ -57,7 +70,7 @@ public class TkControlHdlTest {
       for (var msg : sndMessages) {
         if ("receive".equals(msg.type)) {
           var bytes = ByteBuffer.wrap(Base64.getDecoder().decode(msg.data));
-          ctlHdl.onMessage(bytes);
+          ctlHdl.onMessage(conn, bytes);
         } else {
           log.info("Ref command ==> {}", msg.data);
         }
@@ -65,7 +78,7 @@ public class TkControlHdlTest {
       for (var msg : wfMessages) {
         if ("receive".equals(msg.type)) {
           var bytes = ByteBuffer.wrap(Base64.getDecoder().decode(msg.data));
-          ctlHdl.onMessage(bytes);
+          ctlHdl.onMessage(conn, bytes);
         }
       }
 
