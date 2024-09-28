@@ -68,7 +68,9 @@ public class TkSocketServer implements Closeable {
         throw new IllegalStateException("Incoming connection - missing handshake response " + clientSocket);
       }
     } catch (Exception e) {
-      log.error("Incoming connection handler error - {}", clientSocket.getRemoteSocketAddress(), e);
+      if (log.isDebugEnabled()) {
+        log.debug("Incoming connection handler error - {}", clientSocket.getRemoteSocketAddress(), e);
+      }
     } finally {
       try {
         clientSocket.close();
