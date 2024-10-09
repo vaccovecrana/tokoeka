@@ -12,6 +12,8 @@ import java.util.Map;
 
 public class TkFormat {
 
+  public static int DefaultMessageShorten = 64;
+
   public static String asString(ByteBuffer bytes) {
     return StandardCharsets.UTF_8.decode(bytes).toString();
   }
@@ -48,6 +50,24 @@ public class TkFormat {
 
   public static TkDxConfig loadKiwiDxConfig(String data, TkJsonIn jsonIn) {
     return load(data, TkDxConfig.class, jsonIn);
+  }
+
+  public static String shorten(String msg, int maxLength) {
+    if (msg == null) {
+      return "null";
+    }
+    msg = msg.trim();
+    if (msg.length() <= maxLength || maxLength == 1) {
+      return msg;
+    }
+    var ml2 = maxLength / 2;
+    var v0 = msg.substring(0, ml2);
+    var v1 = msg.substring(msg.length() - ml2);
+    return String.format("%s...%s", v0, v1);
+  }
+
+  public static String shorten(String msg) {
+    return shorten(msg, DefaultMessageShorten);
   }
 
 }

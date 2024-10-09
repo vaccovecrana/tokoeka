@@ -1,8 +1,6 @@
 package io.vacco.tokoeka.util;
 
 import io.vacco.tokoeka.spi.TkConn;
-
-import java.io.IOException;
 import java.net.Socket;
 import java.util.Objects;
 import java.util.function.BiConsumer;
@@ -38,10 +36,6 @@ public class TkConnAdapter implements TkConn {
 
   @Override public Socket getSocket() {
     return socket;
-  }
-
-  @Override public void close() throws IOException {
-    socket.close();
   }
 
   @Override public void close(int code) {

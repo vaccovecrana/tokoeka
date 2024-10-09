@@ -8,8 +8,6 @@ import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
 import org.slf4j.*;
-
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -17,6 +15,7 @@ import java.util.*;
 
 import static j8spec.J8Spec.*;
 import static io.vacco.tokoeka.TkLogging.initLog;
+import static io.vacco.tokoeka.util.TkFormat.shorten;
 
 @DefinedOrder
 @RunWith(J8SpecRunner.class)
@@ -44,8 +43,9 @@ public class TkControlHdlTest {
         @Override public void setAttachment(Object attachment) {}
         @Override public <T> T getAttachment() { return null; }
         @Override public Socket getSocket() { return null; }
-        @Override public void close() {}
-        @Override public void close(int code) {}
+        @Override public void close(int code) {
+          log.info("close - [{}]", code);
+        }
         @Override public void close(int code, String msg) {
           log.info("close - [{}, {}]", code, msg);
         }
@@ -62,7 +62,7 @@ public class TkControlHdlTest {
         .withConfigPin(((kiwiConfig, dxConfig, dxCommConfig) -> {
           for (var o : new Object[]{kiwiConfig, dxConfig, dxCommConfig}) {
             if (o != null) {
-              log.info(g.toJson(o));
+              log.info(shorten(g.toJson(o)));
             }
           }
         }));
@@ -72,7 +72,7 @@ public class TkControlHdlTest {
           var bytes = ByteBuffer.wrap(Base64.getDecoder().decode(msg.data));
           ctlHdl.onMessage(conn, bytes);
         } else {
-          log.info("Ref command ==> {}", msg.data);
+          log.info("Ref command ==> {}", shorten(msg.data));
         }
       }
       for (var msg : wfMessages) {

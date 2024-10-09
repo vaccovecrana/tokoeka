@@ -11,6 +11,7 @@ import java.util.*;
 
 import static java.nio.ByteBuffer.wrap;
 import static java.lang.System.currentTimeMillis;
+import static io.vacco.tokoeka.util.TkFormat.shorten;
 
 public class TkSockets {
 
@@ -218,10 +219,7 @@ public class TkSockets {
         log.trace("> TXT: {} ({} bytes)", message, payload.length);
       }
     } catch (Exception e) {
-      var msg = message != null && message.length() > 64
-        ? String.format("%s...", message.substring(0, 64))
-        : message;
-      throw new IllegalStateException(String.format("unable to send text: %s", msg), e);
+      throw new IllegalStateException(String.format("unable to send text: %s", shorten(message)), e);
     }
   }
 
@@ -264,7 +262,7 @@ public class TkSockets {
       var pongDiff = nowMs - socketState.lastPongMs;
       var pongExp = pongDiff != nowMs && pongDiff >= socketState.keepAliveMs; // missing subsequent client pong
       if (pongExp) {
-        log.debug("Ping/Pong keep-alive expired {}, pingDiff: {}, pongDiff: {}", conn.getSocket().getRemoteSocketAddress(), pingDiff, pongDiff);
+        log.warn("Ping/Pong keep-alive expired {}, pingDiff: {}, pongDiff: {}", conn.getSocket().getRemoteSocketAddress(), pingDiff, pongDiff);
         sendClose(outputStream, WsCloseGoAway, WsCloseGoAwayRes);
         socketHdl.onClose(conn, WsCloseGoAway, false);
         return true;
@@ -301,7 +299,7 @@ public class TkSockets {
       if (opcode == 0x1) {
         var msg = new String(completeMessage);
         if (log.isTraceEnabled()) {
-          log.trace("< TXT: {}", msg);
+          log.trace("< TXT: {}", shorten(msg));
         }
         socketHdl.onMessage(conn, msg);
       } else if (opcode == 0x2) {
@@ -331,6 +329,18 @@ public class TkSockets {
       socketState.accumulatedData.reset();
     }
     return false;
+  }
+
+  public static void doClose(Closeable c) {
+    try {
+      c.close();
+    } catch (Exception e) {
+      if (log.isWarnEnabled()) {
+        log.warn("Error closing {} - {}", c, e.getMessage());
+      } else if (log.isDebugEnabled()) {
+        log.debug("Error closing {}", c);
+      }
+    }
   }
 
 }

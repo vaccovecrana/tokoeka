@@ -54,7 +54,8 @@ public class TkSocketServer implements Closeable {
           clientSocket, socketState,
           msg -> send(msg, outputStream),
           (code, msg) -> {
-
+            sendClose(outputStream, code, msg);
+            doClose(clientSocket);
           }
         );
         this.socketHdl.onOpen(conn, handshakeResponse);
@@ -72,22 +73,14 @@ public class TkSocketServer implements Closeable {
         log.debug("Incoming connection handler error - {}", clientSocket.getRemoteSocketAddress(), e);
       }
     } finally {
-      try {
-        clientSocket.close();
-      } catch (IOException e) {
-        log.warn("Incoming connection close error - {}", e.getMessage());
-      }
+      doClose(clientSocket);
     }
   }
 
   @Override public void close() {
     clientThreadPool.shutdown();
     if (serverSocket != null) {
-      try {
-        serverSocket.close();
-      } catch (Exception e) {
-        log.warn("Websocket server close error - {}", e.getMessage());
-      }
+      doClose(serverSocket);
     }
   }
 

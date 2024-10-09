@@ -71,7 +71,7 @@ public class TkSocket implements Closeable, Consumer<String> {
         break;
       }
     }
-    this.close();
+    doClose(this);
   }
 
   @Override public void accept(String s) {
@@ -79,11 +79,7 @@ public class TkSocket implements Closeable, Consumer<String> {
   }
 
   @Override public void close() {
-    try {
-      socket.close();
-    } catch (IOException e) {
-      log.error("Unable to close ws socket: {} - {}", this, e.getMessage());
-    }
+    doClose(socket);
     if (log.isDebugEnabled()) {
       log.debug("ws connection closed");
     }

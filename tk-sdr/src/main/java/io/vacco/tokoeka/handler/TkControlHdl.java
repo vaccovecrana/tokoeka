@@ -9,7 +9,6 @@ import org.slf4j.*;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.function.Consumer;
 
 import static io.vacco.tokoeka.schema.TkConstants.*;
 import static io.vacco.tokoeka.util.TkCommand.*;
@@ -68,11 +67,7 @@ public class TkControlHdl implements TkSocketHdl {
       case down:            this.controlEvent(-1, key, value, true, null); break;
       default:
         if (log.isDebugEnabled()) {
-          var val = value == null ? "" : value.trim();
-          if (val.length() > 64) {
-            val = String.format("%s...", val.substring(0, 64));
-          }
-          log.debug("Unknown message key/value: {} -> {}", key, val);
+          log.debug("Unknown message key/value: {} -> {}", key, shorten(value));
         }
     }
   }
@@ -80,7 +75,7 @@ public class TkControlHdl implements TkSocketHdl {
   private void processMsg(String body) {
     var params = parseParameters(body);
     if (log.isTraceEnabled()) {
-      log.trace(">> {} {} {}", MSG, body, params);
+      log.trace(">> {} {} {}", MSG, shorten(body), shorten(params.toString()));
     }
     params.forEach(this::processKeyValue);
   }
