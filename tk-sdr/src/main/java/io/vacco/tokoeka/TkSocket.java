@@ -46,7 +46,10 @@ public class TkSocket implements Closeable, Consumer<String> {
       socketConn = new TkConnAdapter(
         socket, socketState,
         (msg) -> send(msg, outputStream),
-        (code, msg) -> sendClose(outputStream, code, msg)
+        (code, msg) -> {
+          sendClose(outputStream, code, msg);
+          doClose(socket);
+        }
       );
       socketHdl.onOpen(socketConn, wsClientHandShakeResponseOf(inputStream));
       return this;
