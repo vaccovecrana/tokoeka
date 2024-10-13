@@ -47,15 +47,14 @@ public class TkSocketTest {
           squelch.processAudio(rawPcm);
           player.play(sampleRate, rawPcm);
         }))
-        .withControlPin((code, key, value, remote, e) -> {
-          log.info("control event: {} [{}] [{}] {}", code, key, value, remote, e);
-          var isError = code > 1000
-            || (value != null && value.equals("Operation timed out"))
-            || (code == -1 && key == null && value == null && !remote);
-          if (isError) {
-            go[0] = false;
-          }
-        });
+        .withSdrPin(((conn, key, value, e) -> {
+          log.info("sdr event: {} [{}, {}]", conn, key, value, e);
+          var state0 = conn.getState();
+          var code = state0.closeCode;
+          var isError = (code > 1000) || (value != null && value.equals("Operation timed out"));
+          go[0] = !isError;
+        }))
+        .withControlFn(conn -> go[0] && nowMsDiffLt(nowMs, 120_000));
 
       sock.withHandler(ctlHdl);
 
@@ -77,7 +76,7 @@ public class TkSocketTest {
       cfg.nrSpecGain = 1;
       cfg.nrSpecActiveSnr = 1000;
 
-      sock.connect().listen(() -> go[0] && nowMsDiffLt(nowMs, 120_000));
+      sock.connect().listen();
       player.close();
     }));
   }

@@ -3,7 +3,6 @@ package io.vacco.tokoeka.util;
 import io.vacco.tokoeka.spi.TkConn;
 import java.net.Socket;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class TkConnAdapter implements TkConn {
@@ -11,14 +10,11 @@ public class TkConnAdapter implements TkConn {
   private final Socket socket;
   private final TkSocketState socketState;
   private final Consumer<String> tx;
-  private final BiConsumer<Integer, String> onClose;
 
-  public TkConnAdapter(Socket socket, TkSocketState socketState,
-                       Consumer<String> tx, BiConsumer<Integer, String> onClose) {
+  public TkConnAdapter(Socket socket, TkSocketState socketState, Consumer<String> tx) {
     this.socket = Objects.requireNonNull(socket);
     this.socketState = Objects.requireNonNull(socketState);
     this.tx = Objects.requireNonNull(tx);
-    this.onClose = Objects.requireNonNull(onClose);
   }
 
   @Override public void setAttachment(Object attachment) {
@@ -38,16 +34,20 @@ public class TkConnAdapter implements TkConn {
     return socket;
   }
 
+  @Override public TkSocketState getState() {
+    return socketState;
+  }
+
   @Override public void close(int code) {
-    onClose.accept(code, null);
+    socketState.markClosed(code, null, false);
   }
 
   @Override public void close(int code, String msg) {
-    onClose.accept(code, msg);
+    socketState.markClosed(code, msg, false);
   }
 
   @Override public String toString() {
-    return socket.toString();
+    return String.format("%s, %s", socket, socketState);
   }
 
 }

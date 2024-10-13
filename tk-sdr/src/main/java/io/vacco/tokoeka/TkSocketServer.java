@@ -1,6 +1,6 @@
 package io.vacco.tokoeka;
 
-import io.vacco.tokoeka.spi.TkSocketHdl;
+import io.vacco.tokoeka.spi.*;
 import io.vacco.tokoeka.util.*;
 import org.slf4j.*;
 import java.io.*;
@@ -18,14 +18,19 @@ public class TkSocketServer implements Closeable {
   private final int                     port;
   private final TkSocketHdl             socketHdl;
   private final Supplier<TkSocketState> stateFn;
-  private final ExecutorService         clientThreadPool = Executors.newCachedThreadPool();
+  private final ExecutorService         clientPool;
 
   private ServerSocket serverSocket;
 
-  public TkSocketServer(int port, TkSocketHdl socketHdl, Supplier<TkSocketState> stateFn) {
+  public TkSocketServer(int port, TkSocketHdl socketHdl, Supplier<TkSocketState> stateFn, ExecutorService clientPool) {
     this.port = port;
     this.stateFn = requireNonNull(stateFn);
     this.socketHdl = requireNonNull(socketHdl);
+    this.clientPool = requireNonNull(clientPool);
+  }
+
+  public TkSocketServer(int port, TkSocketHdl socketHdl, Supplier<TkSocketState> stateFn) {
+    this(port, socketHdl, stateFn, Executors.newCachedThreadPool());
   }
 
   public void start() {
@@ -34,7 +39,7 @@ public class TkSocketServer implements Closeable {
       log.info("WebSocket server started on port {}", port);
       while (!serverSocket.isClosed()) {
         var clientSocket = serverSocket.accept();
-        clientThreadPool.submit(() -> handleClient(clientSocket));
+        clientPool.submit(() -> handleClient(clientSocket));
       }
     } catch (IOException e) {
       throw new IllegalStateException("Unable to start websocket server", e);
@@ -42,43 +47,33 @@ public class TkSocketServer implements Closeable {
   }
 
   private void handleClient(Socket clientSocket) {
-    log.debug("Incoming connection: {}", clientSocket);
+    log.debug("Client connection: {}", clientSocket);
+    TkConn conn = null;
     try {
       var inputStream = clientSocket.getInputStream();
       var outputStream = clientSocket.getOutputStream();
       var socketState = this.stateFn.get();
       var handShake = wsServerHandShakeOf(inputStream);
       var handshakeResponse = performHandshake(handShake, outputStream);
-      if (handshakeResponse != null) {
-        var conn = new TkConnAdapter(
-          clientSocket, socketState,
-          msg -> send(msg, outputStream),
-          (code, msg) -> {
-            sendClose(outputStream, code, msg);
-            doClose(clientSocket);
-          }
-        );
-        this.socketHdl.onOpen(conn, handshakeResponse);
-        while (!clientSocket.isClosed()) {
-          var stop = handleMessage(this.socketHdl, socketState, conn, inputStream, outputStream);
-          if (stop) {
-            break;
-          }
+      conn = new TkConnAdapter(clientSocket, socketState, msg -> send(msg, outputStream));
+      this.socketHdl.onOpen(conn, handshakeResponse);
+      while (!clientSocket.isClosed()) {
+        var stop = handleMessage(this.socketHdl, conn, inputStream, outputStream);
+        if (stop) {
+          break;
         }
-      } else {
-        throw new IllegalStateException("Incoming connection - missing handshake response " + clientSocket);
       }
     } catch (Exception e) {
       if (log.isDebugEnabled()) {
-        log.debug("Incoming connection handler error - {}", clientSocket.getRemoteSocketAddress(), e);
+        log.debug("Client connection error - {}", clientSocket.getRemoteSocketAddress(), e);
       }
     } finally {
-      doClose(clientSocket);
+      tearDown(clientSocket, conn, socketHdl);
     }
   }
 
   @Override public void close() {
-    clientThreadPool.shutdown();
+    clientPool.shutdown();
     if (serverSocket != null) {
       doClose(serverSocket);
     }

@@ -43,26 +43,20 @@ public class TkSocket implements Closeable, Consumer<String> {
       inputStream = socket.getInputStream();
       outputStream.write(wsHandShakeOf(host, port, endpoint).getBytes());
       outputStream.flush();
-      socketConn = new TkConnAdapter(
-        socket, socketState,
-        (msg) -> send(msg, outputStream),
-        (code, msg) -> {
-          sendClose(outputStream, code, msg);
-          doClose(socket);
-        }
-      );
+      socketConn = new TkConnAdapter(socket, socketState, (msg) -> send(msg, outputStream));
       socketHdl.onOpen(socketConn, wsClientHandShakeResponseOf(inputStream));
       return this;
     } catch (Exception e) {
       socketHdl.onError(socketConn, e);
+      doClose(this);
       throw new IllegalStateException("ws connection failed", e);
     }
   }
 
-  public void listen(Supplier<Boolean> go) {
-    while (go.get() && !socket.isClosed()) {
+  public void listen() {
+    while (!socket.isClosed()) {
       try {
-        var stop = handleMessage(socketHdl, socketState, socketConn, inputStream, outputStream);
+        var stop = handleMessage(socketHdl, socketConn, inputStream, outputStream);
         if (stop) {
           break;
         }
@@ -74,7 +68,7 @@ public class TkSocket implements Closeable, Consumer<String> {
         break;
       }
     }
-    doClose(this);
+    tearDown(socket, socketConn, socketHdl);
   }
 
   @Override public void accept(String s) {
@@ -82,19 +76,12 @@ public class TkSocket implements Closeable, Consumer<String> {
   }
 
   @Override public void close() {
-    doClose(socket);
-    if (log.isDebugEnabled()) {
-      log.debug("ws connection closed");
-    }
+    tearDown(socket, socketConn, socketHdl);
   }
 
   public TkSocket withHandler(TkSocketHdl hdl) {
     this.socketHdl = requireNonNull(hdl);
     return this;
-  }
-
-  public Socket getSocket() {
-    return socket;
   }
 
   @Override public String toString() {

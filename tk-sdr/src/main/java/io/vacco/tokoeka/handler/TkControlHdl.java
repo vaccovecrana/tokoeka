@@ -4,11 +4,13 @@ import io.vacco.tokoeka.schema.dx.TkDxConfig;
 import io.vacco.tokoeka.schema.kiwi.TkKiwiConfig;
 import io.vacco.tokoeka.spi.*;
 import io.vacco.tokoeka.schema.TkConfig;
+import io.vacco.tokoeka.util.*;
 import org.slf4j.*;
 
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 
 import static io.vacco.tokoeka.schema.TkConstants.*;
 import static io.vacco.tokoeka.util.TkCommand.*;
@@ -23,11 +25,13 @@ public class TkControlHdl implements TkSocketHdl {
 
   private final TkConfig config;
 
-  private TkAudioHdl        audioHdl;
-  private TkWaterfallHdl    waterfallHdl;
-  private TkJsonIn          jsonIn;
-  private TkConfigPin       configPin;
-  protected TkControlPin    controlPin;
+  private   TkAudioHdl      audioHdl;
+  private   TkWaterfallHdl  waterfallHdl;
+  private   TkJsonIn        jsonIn;
+  private   TkConfigPin     configPin;
+  protected TkSdrPin        sdrPin;
+
+  private Function<TkConn, Boolean> controlFn;
 
   public TkKiwiConfig kiwiConfig;
   public TkDxConfig   dxConfig, dxCommConfig;
@@ -36,13 +40,13 @@ public class TkControlHdl implements TkSocketHdl {
     this.config = requireNonNull(config);
   }
 
-  public void controlEvent(int wsCode, String key, String value, boolean remote, Exception e) {
-    if (this.controlPin != null) {
-      this.controlPin.onEvent(wsCode, key, value, remote, e);
+  public void sdrEvent(TkConn conn, String key, String value, Exception e) {
+    if (this.sdrPin != null) {
+      this.sdrPin.onEvent(conn, key, value, e);
     }
   }
 
-  private void processKeyValue(String key, String value) {
+  private void processKeyValue(TkConn conn, String key, String value) {
     switch (key) {
       case last_community_download: log.info(URLDecoder.decode(value, StandardCharsets.UTF_8)); break;
       case bandwidth:       this.config.frequencyMax = parseDouble(value); break;
@@ -64,7 +68,7 @@ public class TkControlHdl implements TkSocketHdl {
       case badp:
       case too_busy:
       case redirect:
-      case down:            this.controlEvent(-1, key, value, true, null); break;
+      case down:            this.sdrEvent(conn, key, value, null); break;
       default:
         if (log.isDebugEnabled()) {
           log.debug("Unknown message key/value: {} -> {}", key, shorten(value));
@@ -72,12 +76,12 @@ public class TkControlHdl implements TkSocketHdl {
     }
   }
 
-  private void processMsg(String body) {
+  private void processMsg(TkConn conn, String body) {
     var params = parseParameters(body);
     if (log.isTraceEnabled()) {
       log.trace(">> {} {} {}", MSG, shorten(body), shorten(params.toString()));
     }
-    params.forEach(this::processKeyValue);
+    params.forEach((key, value) -> processKeyValue(conn, key, value));
   }
 
   private void processAudio(ByteBuffer data) {
@@ -98,6 +102,10 @@ public class TkControlHdl implements TkSocketHdl {
   }
 
   @Override public void onMessage(TkConn conn, ByteBuffer data) {
+    if (this.controlFn != null && !this.controlFn.apply(conn)) {
+      conn.close(TkSockets.WsCloseGoAway);
+      return;
+    }
     if (data == null || data.remaining() < 3) {
       log.error("No data, or received data is too short to contain a valid tag");
       return;
@@ -113,7 +121,7 @@ public class TkControlHdl implements TkSocketHdl {
       }
 
       switch (tag) {
-        case MSG: processMsg(asString(skip(data, 1))); break;
+        case MSG: processMsg(conn, asString(skip(data, 1))); break;
         case SND: processAudio(data); break;
         case WF:  processWaterfall(skip(data, 1)); break;
         // case "EXT": processExt(asString(skip(data, 1))); break; TODO what should be implemented?
@@ -126,12 +134,12 @@ public class TkControlHdl implements TkSocketHdl {
 
   @Override public void onMessage(TkConn conn, String message) {}
 
-  @Override public void onClose(TkConn conn, int code, boolean remote) {
-    this.controlEvent(code, null, null, remote, null);
+  @Override public void onClose(TkConn conn) {
+    this.sdrEvent(conn, null, null, null);
   }
 
   @Override public void onError(TkConn conn, Exception e) {
-    this.controlEvent(-1, null, null, false, e);
+    this.sdrEvent(conn, null, null, e);
   }
 
   public TkControlHdl withAudioHandler(TkAudioHdl hdl) {
@@ -149,13 +157,18 @@ public class TkControlHdl implements TkSocketHdl {
     return this;
   }
 
-  public TkControlHdl withControlPin(TkControlPin pin) {
-    this.controlPin = requireNonNull(pin);
+  public TkControlHdl withSdrPin(TkSdrPin pin) {
+    this.sdrPin = requireNonNull(pin);
     return this;
   }
 
   public TkControlHdl withConfigPin(TkConfigPin pin) {
     this.configPin = requireNonNull(pin);
+    return this;
+  }
+
+  public TkControlHdl withControlFn(Function<TkConn, Boolean> controlFn) {
+    this.controlFn = requireNonNull(controlFn);
     return this;
   }
 

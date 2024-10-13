@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import io.vacco.tokoeka.handler.*;
 import io.vacco.tokoeka.schema.*;
 import io.vacco.tokoeka.spi.TkConn;
+import io.vacco.tokoeka.util.TkSocketState;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
@@ -38,14 +39,14 @@ public class TkControlHdlTest {
       var cfg = new TkConfig();
       cfg.modulation = TkModulation.am;
 
+      var state = TkSocketState.of(-1, 65536);
       var conn = new TkConn() {
         @Override public void accept(String s) { log.info(s); }
         @Override public void setAttachment(Object attachment) {}
         @Override public <T> T getAttachment() { return null; }
         @Override public Socket getSocket() { return null; }
-        @Override public void close(int code) {
-          log.info("close - [{}]", code);
-        }
+        @Override public TkSocketState getState() { return state; }
+        @Override public void close(int code) { log.info("close - [{}]", code); }
         @Override public void close(int code, String msg) {
           log.info("close - [{}, {}]", code, msg);
         }
@@ -75,6 +76,7 @@ public class TkControlHdlTest {
           log.info("Ref command ==> {}", shorten(msg.data));
         }
       }
+
       for (var msg : wfMessages) {
         if ("receive".equals(msg.type)) {
           var bytes = ByteBuffer.wrap(Base64.getDecoder().decode(msg.data));

@@ -7,7 +7,7 @@ public interface TkSocketHdl {
   void onOpen(TkConn conn, String handShake);
   void onMessage(TkConn conn, String msg);
   void onMessage(TkConn conn, ByteBuffer msg);
-  void onClose(TkConn conn, int code, boolean remote);
+  void onClose(TkConn conn);
   void onError(TkConn conn, Exception e);
 
 }

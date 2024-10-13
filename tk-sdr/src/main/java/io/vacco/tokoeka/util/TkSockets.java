@@ -105,7 +105,7 @@ public class TkSockets {
       .findFirst()
       .orElse(null);
     if (key == null) {
-      return null;
+      throw new IllegalStateException("Incoming request - missing handshake response: " + request);
     }
     var acceptKey = generateAcceptKey(key);
     var response = "HTTP/1.1 101 Switching Protocols\r\n"
@@ -161,8 +161,7 @@ public class TkSockets {
 
   public static void sendClose(OutputStream outputStream, int closeCode, String closeReason) {
     try {
-      var frame = new ByteArrayOutputStream();
-      // Close frame header: FIN + opcode 0x8 (CLOSE)
+      var frame = new ByteArrayOutputStream(); // Close frame header: FIN + opcode 0x8 (CLOSE)
       frame.write(0x88);
 
       var reasonBytes = closeReason != null ? closeReason.getBytes() : new byte[0];
@@ -173,8 +172,8 @@ public class TkSockets {
         throw new IllegalArgumentException("Close reason too long");
       }
 
-      frame.write((closeCode >> 8) & 0xFF);  // most significant byte
-      frame.write(closeCode & 0xFF);         // least significant byte
+      frame.write((closeCode >> 8) & 0xFF); // most significant byte
+      frame.write(closeCode & 0xFF);        // least significant byte
       if (reasonBytes.length > 0) {
         frame.write(reasonBytes);
       }
@@ -223,6 +222,26 @@ public class TkSockets {
     }
   }
 
+  public static void tearDown(Socket socket, TkConn socketConn, TkSocketHdl socketHdl) {
+    try {
+      if (socketConn != null) {
+        var state = socketConn.getState();
+        if (state.isClosed()) {
+          if (!state.closeByRemote && !socket.isClosed()) {
+            sendClose(socket.getOutputStream(), state.closeCode, state.closeReason);
+          }
+        }
+        socketHdl.onClose(socketConn);
+      }
+      doClose(socket);
+      if (log.isDebugEnabled()) {
+        log.debug("ws connection closed - {}, {}", socket, socketConn != null ? socketConn.getState() : "?");
+      }
+    } catch (Exception e) {
+      log.debug("ws connection close error", e);
+    }
+  }
+
   public static int payloadLengthOf(byte[] frameHeader, InputStream is) {
     int payloadLength = frameHeader[1] & 0x7F;
     if (payloadLength == 126) {
@@ -242,8 +261,12 @@ public class TkSockets {
     return payloadLength;
   }
 
-  public static boolean handleMessage(TkSocketHdl socketHdl, TkSocketState socketState, TkConn conn,
+  public static boolean handleMessage(TkSocketHdl socketHdl, TkConn conn,
                                       InputStream inputStream, OutputStream outputStream) throws IOException, InterruptedException {
+    var socketState = conn.getState();
+    if (socketState.isClosed()) {
+      return true;
+    }
     if (socketState.keepAliveMs > 0) {
       var nowMs = currentTimeMillis();
       var noData = inputStream.available() == 0;
@@ -255,7 +278,7 @@ public class TkSockets {
         Thread.sleep(
           pingDiff == nowMs
             ? socketState.keepAliveMs / 8
-            : socketState.keepAliveMs / 2
+            : socketState.keepAliveMs / 2 // TODO uggghh... move this to a thread or something.
         );
         return false;
       }
@@ -263,8 +286,7 @@ public class TkSockets {
       var pongExp = pongDiff != nowMs && pongDiff >= socketState.keepAliveMs; // missing subsequent client pong
       if (pongExp) {
         log.warn("Ping/Pong keep-alive expired {}, pingDiff: {}, pongDiff: {}", conn.getSocket().getRemoteSocketAddress(), pingDiff, pongDiff);
-        sendClose(outputStream, WsCloseGoAway, WsCloseGoAwayRes);
-        socketHdl.onClose(conn, WsCloseGoAway, false);
+        socketState.markClosed(WsCloseGoAway, WsCloseGoAwayRes, false);
         return true;
       }
     }
@@ -276,9 +298,8 @@ public class TkSockets {
     var payloadLength = payloadLengthOf(frameHeader, inputStream);
 
     if (payloadLength > socketState.maxFrameBytes) {
-      sendClose(outputStream, WsCloseTooBig, WsCloseTooBigRes);
-      socketHdl.onClose(conn, WsCloseTooBig, false); // (message too big)
       log.warn("Frame exceeds maximum allowed size: [{}], closing", payloadLength);
+      socketState.markClosed(WsCloseTooBig, WsCloseTooBigRes, false);
       return true;
     }
 
@@ -319,10 +340,10 @@ public class TkSockets {
           if (log.isTraceEnabled()) {
             log.trace("< CLOSE ({})", closeCode);
           }
-          socketHdl.onClose(conn, closeCode, true);
+          socketState.markClosed(closeCode, "TODO implement me", true); // TODO implement reading close reason.
         } else {
           log.trace("< CLOSE (?)");
-          throw new IllegalStateException("Received close frame with no close code.");
+          socketState.markClosed(-1, "remote provided no close code/reason", true);
         }
         return true;
       }
@@ -333,7 +354,9 @@ public class TkSockets {
 
   public static void doClose(Closeable c) {
     try {
-      c.close();
+      if (c != null) {
+        c.close();
+      }
     } catch (Exception e) {
       if (log.isWarnEnabled()) {
         log.warn("Error closing {} - {}", c, e.getMessage());
