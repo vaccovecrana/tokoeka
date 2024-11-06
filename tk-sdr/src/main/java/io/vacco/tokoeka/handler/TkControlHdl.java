@@ -84,9 +84,9 @@ public class TkControlHdl implements TkSocketHdl {
     params.forEach((key, value) -> processKeyValue(conn, key, value));
   }
 
-  private void processAudio(ByteBuffer data) {
+  private void processAudio(TkConn conn, ByteBuffer data) {
     if (this.audioHdl != null) {
-      this.audioHdl.processAudio(data);
+      this.audioHdl.processAudio(conn, data);
     }
   }
 
@@ -122,7 +122,7 @@ public class TkControlHdl implements TkSocketHdl {
 
       switch (tag) {
         case MSG: processMsg(conn, asString(skip(data, 1))); break;
-        case SND: processAudio(data); break;
+        case SND: processAudio(conn, data); break;
         case WF:  processWaterfall(skip(data, 1)); break;
         // case "EXT": processExt(asString(skip(data, 1))); break; TODO what should be implemented?
         default: log.warn("Unsupported message tag {} ({})", tag, data.remaining());

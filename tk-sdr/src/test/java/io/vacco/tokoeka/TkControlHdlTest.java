@@ -55,7 +55,7 @@ public class TkControlHdlTest {
       };
 
       var ctlHdl = new TkControlHdl(cfg)
-        .withAudioHandler(new TkAudioHdl(cfg, conn, (cfg0, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
+        .withAudioHandler(new TkAudioHdl(cfg, conn, (conn0, sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
           log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, rssi, rawPcm.length);
         }))
         .withWaterfallHandler(new TkWaterfallHdl(conn, (xBin, sequenceNumber, flags, rawWfData) -> {

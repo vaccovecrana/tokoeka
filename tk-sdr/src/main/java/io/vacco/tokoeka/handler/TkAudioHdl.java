@@ -2,7 +2,7 @@ package io.vacco.tokoeka.handler;
 
 import io.vacco.tokoeka.audio.TkAdpcm;
 import io.vacco.tokoeka.schema.TkConfig;
-import io.vacco.tokoeka.spi.TkAudioPin;
+import io.vacco.tokoeka.spi.*;
 import io.vacco.tokoeka.util.*;
 import org.slf4j.*;
 import java.nio.*;
@@ -65,7 +65,7 @@ public class TkAudioHdl {
     tx.accept(setKeepAlive());
   }
 
-  public void processAudio(ByteBuffer buffer) {
+  public void processAudio(TkConn conn, ByteBuffer buffer) {
     if (buffer.remaining() < 7) {
       log.warn("Received audio data is too short");
       return;
@@ -89,7 +89,7 @@ public class TkAudioHdl {
       } else {
         rawPcm = audio;
       }
-      audioPin.onAudio((int) config.sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm);
+      audioPin.onAudio(conn, (int) config.sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm);
     }
 
     timer.update();

@@ -42,7 +42,7 @@ public class TkSocketTest {
       var nowMs = System.currentTimeMillis();
 
       var ctlHdl = new TkControlHdl(cfg)
-        .withAudioHandler(new TkAudioHdl(cfg, sock, (sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
+        .withAudioHandler(new TkAudioHdl(cfg, sock, (conn, sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm) -> {
           log.info("flags: {} seqNo: {} sMeter: {} rssi: {} raw: {}", flags, sequenceNumber, sMeter, String.format("%6.2f", rssi), rawPcm.length);
           squelch.processAudio(rawPcm);
           player.play(sampleRate, rawPcm);
