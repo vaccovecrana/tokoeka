@@ -47,12 +47,20 @@ public class TkConnAdapter implements TkConn {
     socketState.markClosed(code, msg, false);
   }
 
-  @Override public void sendPing() throws IOException {
-    TkSockets.sendPing(socket.getOutputStream());
+  @Override public void sendPing() {
+    try {
+      TkSockets.sendPing(socket.getOutputStream());
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
-  @Override public void sendPong() throws IOException {
-    TkSockets.sendPong(socket.getOutputStream());
+  @Override public void sendPong() {
+    try {
+      TkSockets.sendPong(socket.getOutputStream());
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   @Override public String toString() {

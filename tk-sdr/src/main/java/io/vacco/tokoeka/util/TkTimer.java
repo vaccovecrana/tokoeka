@@ -1,23 +1,24 @@
 package io.vacco.tokoeka.util;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
-public class TkTimer {
+public class TkTimer<T> {
 
   private final long intervalMs;
-  private final Runnable r;
+  private final Consumer<T> runCons;
   private long lastRunMs;
 
-  public TkTimer(long intervalMs, Runnable r) {
+  public TkTimer(long intervalMs, Consumer<T> runCons) {
     this.intervalMs = intervalMs;
-    this.r = Objects.requireNonNull(r);
+    this.runCons = Objects.requireNonNull(runCons);
     this.lastRunMs = System.currentTimeMillis();
   }
 
-  public void update() {
+  public void update(T arg) {
     long currentTime = System.currentTimeMillis();
     if ((currentTime - lastRunMs) >= intervalMs) {
-      r.run();
+      runCons.accept(arg);
       lastRunMs = currentTime;
     }
   }

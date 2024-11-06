@@ -16,13 +16,13 @@ public class TkWaterfallHdl {
   private static final Logger log = LoggerFactory.getLogger(TkWaterfallHdl.class);
 
   private final TkWfPin wfPin;
-  private final TkTimer timer;
+  private final TkTimer<Void> timer;
   private final Consumer<String> tx;
 
   public TkWaterfallHdl(Consumer<String> tx, TkWfPin wfPin) {
     this.tx = Objects.requireNonNull(tx);
     this.wfPin = Objects.requireNonNull(wfPin);
-    this.timer = new TkTimer(3000, () -> tx.accept(setKeepAlive()));
+    this.timer = new TkTimer<>(3000, (Nil) -> tx.accept(setKeepAlive()));
   }
 
   public void processWaterfall(ByteBuffer data) {
@@ -42,7 +42,7 @@ public class TkWaterfallHdl {
       wfPin.onWaterfallData(xBin, sequenceNumber, flags, wfData);
     }
 
-    timer.update();
+    timer.update(null);
   }
 
 }

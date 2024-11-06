@@ -19,7 +19,7 @@ public class TkAudioHdl {
   private final TkAdpcm           adPcm;
   private final TkConfig          config;
   private final TkAudioPin        audioPin;
-  private final TkTimer           timer;
+  private final TkTimer<Void>     timer;
   private final Consumer<String>  tx;
 
   public TkAudioHdl(TkConfig config, Consumer<String> tx, TkAudioPin audioPin) {
@@ -27,7 +27,7 @@ public class TkAudioHdl {
     this.config = Objects.requireNonNull(config);
     this.audioPin = Objects.requireNonNull(audioPin);
     this.tx = Objects.requireNonNull(tx);
-    this.timer = new TkTimer(3000, () -> tx.accept(setKeepAlive()));
+    this.timer = new TkTimer<>(3000, (Nil) -> tx.accept(setKeepAlive()));
   }
 
   public void updateAudioParams() {
@@ -92,7 +92,7 @@ public class TkAudioHdl {
       audioPin.onAudio(conn, (int) config.sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm);
     }
 
-    timer.update();
+    timer.update(null);
   }
 
 }
