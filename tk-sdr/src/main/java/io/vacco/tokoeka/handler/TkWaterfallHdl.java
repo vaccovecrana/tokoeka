@@ -1,7 +1,7 @@
 package io.vacco.tokoeka.handler;
 
 import io.vacco.tokoeka.spi.TkWfPin;
-import io.vacco.tokoeka.util.TkCounter;
+import io.vacco.tokoeka.util.TkTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
@@ -16,13 +16,13 @@ public class TkWaterfallHdl {
   private static final Logger log = LoggerFactory.getLogger(TkWaterfallHdl.class);
 
   private final TkWfPin wfPin;
-  private final TkCounter counter;
+  private final TkTimer timer;
   private final Consumer<String> tx;
 
   public TkWaterfallHdl(Consumer<String> tx, TkWfPin wfPin) {
     this.tx = Objects.requireNonNull(tx);
     this.wfPin = Objects.requireNonNull(wfPin);
-    this.counter = new TkCounter(128, () -> tx.accept(setKeepAlive()));
+    this.timer = new TkTimer(3000, () -> tx.accept(setKeepAlive()));
   }
 
   public void processWaterfall(ByteBuffer data) {
@@ -42,7 +42,7 @@ public class TkWaterfallHdl {
       wfPin.onWaterfallData(xBin, sequenceNumber, flags, wfData);
     }
 
-    counter.update();
+    timer.update();
   }
 
 }

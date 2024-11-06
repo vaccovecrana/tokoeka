@@ -5,7 +5,7 @@ import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
 
-import static io.vacco.tokoeka.util.TkCounter.nowMsDiffLt;
+import static io.vacco.tokoeka.util.TkTimer.nowMsDiffLt;
 import static j8spec.J8Spec.*;
 import static org.junit.Assert.*;
 

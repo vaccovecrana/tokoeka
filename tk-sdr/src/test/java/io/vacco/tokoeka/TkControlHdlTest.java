@@ -46,6 +46,8 @@ public class TkControlHdlTest {
         @Override public <T> T getAttachment() { return null; }
         @Override public Socket getSocket() { return null; }
         @Override public TkSocketState getState() { return state; }
+        @Override public void sendPing() { log.info("I send the pingz"); }
+        @Override public void sendPong() { log.info("I send the pongz"); }
         @Override public void close(int code) { log.info("close - [{}]", code); }
         @Override public void close(int code, String msg) {
           log.info("close - [{}, {}]", code, msg);

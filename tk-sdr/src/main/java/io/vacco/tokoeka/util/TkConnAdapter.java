@@ -1,6 +1,7 @@
 package io.vacco.tokoeka.util;
 
 import io.vacco.tokoeka.spi.TkConn;
+import java.io.IOException;
 import java.net.Socket;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -44,6 +45,14 @@ public class TkConnAdapter implements TkConn {
 
   @Override public void close(int code, String msg) {
     socketState.markClosed(code, msg, false);
+  }
+
+  @Override public void sendPing() throws IOException {
+    TkSockets.sendPing(socket.getOutputStream());
+  }
+
+  @Override public void sendPong() throws IOException {
+    TkSockets.sendPong(socket.getOutputStream());
   }
 
   @Override public String toString() {

@@ -331,9 +331,11 @@ public class TkSockets {
       } else if (opcode == 0xA) {
         log.debug("< PONG");
         socketState.lastPongMs = currentTimeMillis();
+        socketHdl.onPong(conn);
       } else if (opcode == 0x9) {
         log.debug("< PING");
         sendPong(outputStream);
+        socketHdl.onPing(conn);
       } else if (opcode == 0x8) {
         if (completeMessage.length >= 2) {
           int closeCode = ((completeMessage[0] & 0xFF) << 8) | (completeMessage[1] & 0xFF);

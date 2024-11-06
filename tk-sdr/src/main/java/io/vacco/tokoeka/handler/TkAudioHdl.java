@@ -16,18 +16,18 @@ public class TkAudioHdl {
 
   private static final Logger log = LoggerFactory.getLogger(TkAudioHdl.class);
 
-  private final TkAdpcm adPcm;
-  private final TkConfig config;
-  private final TkAudioPin audioPin;
-  private final TkCounter counter;
-  private final Consumer<String> tx;
+  private final TkAdpcm           adPcm;
+  private final TkConfig          config;
+  private final TkAudioPin        audioPin;
+  private final TkTimer           timer;
+  private final Consumer<String>  tx;
 
   public TkAudioHdl(TkConfig config, Consumer<String> tx, TkAudioPin audioPin) {
     this.adPcm = new TkAdpcm();
     this.config = Objects.requireNonNull(config);
     this.audioPin = Objects.requireNonNull(audioPin);
     this.tx = Objects.requireNonNull(tx);
-    this.counter = new TkCounter(32, () -> tx.accept(setKeepAlive()));
+    this.timer = new TkTimer(3000, () -> tx.accept(setKeepAlive()));
   }
 
   public void updateAudioParams() {
@@ -92,7 +92,7 @@ public class TkAudioHdl {
       audioPin.onAudio((int) config.sampleRate, flags, sequenceNumber, sMeter, rssi, imaPcm, rawPcm);
     }
 
-    counter.update();
+    timer.update();
   }
 
 }
