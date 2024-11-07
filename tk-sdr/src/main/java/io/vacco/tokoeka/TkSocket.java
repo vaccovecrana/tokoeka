@@ -8,7 +8,7 @@ import java.net.Socket;
 import static java.util.Objects.requireNonNull;
 import static io.vacco.tokoeka.util.TkSockets.*;
 
-public class TkSocket implements TkConn {
+public class TkSocket implements TkConn, AutoCloseable {
 
   private static final Logger log = LoggerFactory.getLogger(TkSocket.class);
 
@@ -104,6 +104,10 @@ public class TkSocket implements TkConn {
 
   @Override public void close(int code, String msg) {
     this.socketConn.close(code, msg);
+  }
+
+  @Override public void close() throws Exception {
+    this.socketConn.close(this.socketState.closeCode);
   }
 
   @Override public String toString() {
