@@ -106,7 +106,7 @@ public class TkSocket implements TkConn, AutoCloseable {
     this.socketConn.close(code, msg);
   }
 
-  @Override public void close() throws Exception {
+  @Override public void close() {
     this.socketConn.close(this.socketState.closeCode);
   }
 
