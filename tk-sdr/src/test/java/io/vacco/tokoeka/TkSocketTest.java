@@ -47,8 +47,8 @@ public class TkSocketTest {
           squelch.processAudio(rawPcm);
           player.play(sampleRate, rawPcm);
         }))
-        .withSdrPin(((conn, key, value, e, ping, pong) -> {
-          log.info("sdr event: {} [{}, {}, ping: {}, pong: {}]", conn, key, value, ping, pong, e);
+        .withSdrPin(((conn, key, value, e) -> {
+          log.info("sdr event: {} [{}, {}]", conn, key, value, e);
           var state0 = conn.getState();
           var code = state0.closeCode;
           var isError = (code > 1000) || (value != null && value.equals("Operation timed out"));

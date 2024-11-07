@@ -1,18 +1,17 @@
 package io.vacco.tokoeka.util;
 
 import io.vacco.tokoeka.spi.TkConn;
-import java.io.IOException;
 import java.net.Socket;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-public class TkConnAdapter implements TkConn {
+public class TkServerConn implements TkConn {
 
   private final Socket socket;
   private final TkSocketState socketState;
   private final Consumer<String> tx;
 
-  public TkConnAdapter(Socket socket, TkSocketState socketState, Consumer<String> tx) {
+  public TkServerConn(Socket socket, TkSocketState socketState, Consumer<String> tx) {
     this.socket = Objects.requireNonNull(socket);
     this.socketState = Objects.requireNonNull(socketState);
     this.tx = Objects.requireNonNull(tx);
@@ -48,19 +47,11 @@ public class TkConnAdapter implements TkConn {
   }
 
   @Override public void sendPing() {
-    try {
-      TkSockets.sendPing(socket.getOutputStream());
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
-    }
+    TkSockets.sendPing(socket);
   }
 
   @Override public void sendPong() {
-    try {
-      TkSockets.sendPong(socket.getOutputStream());
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
-    }
+    TkSockets.sendPong(socket);
   }
 
   @Override public String toString() {

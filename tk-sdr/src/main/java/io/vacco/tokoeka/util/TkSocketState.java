@@ -6,6 +6,12 @@ public class TkSocketState {
 
   public final ByteArrayOutputStream accumulatedData = new ByteArrayOutputStream();
 
+  /*
+   * TODO: these attributes are here so ping/pong based keep-alive
+   *   mechanisms can be implemented. However, I'm not going to
+   *   provide a default implementation. Maybe in a future release
+   *   if there's interest/demand.
+   */
   public long     lastPingMs = 0;
   public long     lastPongMs = 0;
   public long     keepAliveMs;

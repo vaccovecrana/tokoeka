@@ -5,12 +5,11 @@ import io.vacco.tokoeka.util.*;
 import org.slf4j.*;
 import java.io.*;
 import java.net.Socket;
-import java.util.function.*;
 
 import static java.util.Objects.requireNonNull;
 import static io.vacco.tokoeka.util.TkSockets.*;
 
-public class TkSocket implements Closeable, Consumer<String> {
+public class TkSocket implements Closeable, TkConn {
 
   private static final Logger log = LoggerFactory.getLogger(TkSocket.class);
 
@@ -22,8 +21,6 @@ public class TkSocket implements Closeable, Consumer<String> {
   private final TkSocketState socketState;
 
   private Socket        socket;
-  private OutputStream  outputStream;
-  private InputStream   inputStream;
   private TkSocketHdl   socketHdl;
   private TkConn        socketConn;
 
@@ -39,12 +36,9 @@ public class TkSocket implements Closeable, Consumer<String> {
   public TkSocket connect() {
     try {
       socket = createSocket(host, port, secure, timeout);
-      outputStream = socket.getOutputStream();
-      inputStream = socket.getInputStream();
-      outputStream.write(wsHandShakeOf(host, port, endpoint).getBytes());
-      outputStream.flush();
-      socketConn = new TkConnAdapter(socket, socketState, (msg) -> send(msg, outputStream));
-      socketHdl.onOpen(socketConn, wsClientHandShakeResponseOf(inputStream));
+      sendRaw(socket, wsHandShakeOf(host, port, endpoint).getBytes());
+      socketConn = new TkServerConn(socket, socketState, (msg) -> send(socket, msg));
+      socketHdl.onOpen(socketConn, wsClientHandShakeResponseOf(socket));
       return this;
     } catch (Exception e) {
       socketHdl.onError(socketConn, e);
@@ -56,7 +50,7 @@ public class TkSocket implements Closeable, Consumer<String> {
   public void listen() {
     while (!socket.isClosed()) {
       try {
-        var stop = handleMessage(socketHdl, socketConn, inputStream, outputStream);
+        var stop = handleMessage(socket, socketConn, socketHdl);
         if (stop) {
           break;
         }
@@ -72,7 +66,7 @@ public class TkSocket implements Closeable, Consumer<String> {
   }
 
   @Override public void accept(String s) {
-    send(s, this.outputStream);
+    send(this.socket, s);
   }
 
   @Override public void close() {
@@ -86,6 +80,39 @@ public class TkSocket implements Closeable, Consumer<String> {
 
   @Override public String toString() {
     return String.format("%s - %s", socket, endpoint);
+  }
+
+  @Override public void setAttachment(Object attachment) {
+    this.socketState.attachment = requireNonNull(attachment);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override public <T> T getAttachment() {
+    return (T) this.socketState.attachment;
+  }
+
+  @Override public Socket getSocket() {
+    return this.socket;
+  }
+
+  @Override public TkSocketState getState() {
+    return this.socketState;
+  }
+
+  @Override public void sendPing() {
+    TkSockets.sendPing(socket);
+  }
+
+  @Override public void sendPong() {
+    TkSockets.sendPong(socket);
+  }
+
+  @Override public void close(int code) {
+    this.socketState.markClosed(code, null, false);
+  }
+
+  @Override public void close(int code, String msg) {
+    this.socketState.markClosed(code, msg, false);
   }
 
 }

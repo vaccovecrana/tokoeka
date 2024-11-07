@@ -50,15 +50,13 @@ public class TkSocketServer implements Closeable {
     log.debug("Client connection: {}", clientSocket);
     TkConn conn = null;
     try {
-      var inputStream = clientSocket.getInputStream();
-      var outputStream = clientSocket.getOutputStream();
       var socketState = this.stateFn.get();
-      var handShake = wsServerHandShakeOf(inputStream);
-      var handshakeResponse = performHandshake(handShake, outputStream);
-      conn = new TkConnAdapter(clientSocket, socketState, msg -> send(msg, outputStream));
+      var handShake = wsServerHandShakeOf(clientSocket);
+      var handshakeResponse = performHandshake(clientSocket, handShake);
+      conn = new TkServerConn(clientSocket, socketState, msg -> send(clientSocket, msg));
       this.socketHdl.onOpen(conn, handshakeResponse);
       while (!clientSocket.isClosed()) {
-        var stop = handleMessage(this.socketHdl, conn, inputStream, outputStream);
+        var stop = handleMessage(clientSocket, conn, this.socketHdl);
         if (stop) {
           break;
         }

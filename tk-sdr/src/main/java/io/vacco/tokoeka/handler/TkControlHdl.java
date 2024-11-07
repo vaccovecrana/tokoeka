@@ -40,9 +40,9 @@ public class TkControlHdl implements TkSocketHdl {
     this.config = requireNonNull(config);
   }
 
-  public void sdrEvent(TkConn conn, String key, String value, Exception e, boolean ping, boolean pong) {
+  public void sdrEvent(TkConn conn, String key, String value, Exception e) {
     if (this.sdrPin != null) {
-      this.sdrPin.onEvent(conn, key, value, e, ping, pong);
+      this.sdrPin.onEvent(conn, key, value, e);
     }
   }
 
@@ -68,7 +68,7 @@ public class TkControlHdl implements TkSocketHdl {
       case badp:
       case too_busy:
       case redirect:
-      case down:            this.sdrEvent(conn, key, value, null, false, false); break;
+      case down:            this.sdrEvent(conn, key, value, null); break;
       default:
         if (log.isDebugEnabled()) {
           log.debug("Unknown message key/value: {} -> {}", key, shorten(value));
@@ -135,19 +135,19 @@ public class TkControlHdl implements TkSocketHdl {
   @Override public void onMessage(TkConn conn, String message) {}
 
   @Override public void onClose(TkConn conn) {
-    this.sdrEvent(conn, null, null, null, false, false);
+    this.sdrEvent(conn, null, null, null);
   }
 
   @Override public void onError(TkConn conn, Exception e) {
-    this.sdrEvent(conn, null, null, e, false, false);
+    this.sdrEvent(conn, null, null, e);
   }
 
   @Override public void onPing(TkConn conn) {
-    this.sdrEvent(conn, null, null, null, true, false);
+    this.sdrEvent(conn, null, null, null);
   }
 
   @Override public void onPong(TkConn conn) {
-    this.sdrEvent(conn, null, null, null, false, true);
+    this.sdrEvent(conn, null, null, null);
   }
 
   public TkControlHdl withAudioHandler(TkAudioHdl hdl) {

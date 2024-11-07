@@ -60,8 +60,8 @@ public class TkSockets {
     return req;
   }
 
-  public static String wsClientHandShakeResponseOf(InputStream inputStream) throws IOException {
-    var reader = new BufferedReader(new InputStreamReader(inputStream));
+  public static String wsClientHandShakeResponseOf(Socket sck) throws IOException {
+    var reader = new BufferedReader(new InputStreamReader(sck.getInputStream()));
     var bld = new StringBuilder();
     String line;
     while ((line = reader.readLine()) != null) {
@@ -77,9 +77,9 @@ public class TkSockets {
     return hs;
   }
 
-  public static String wsServerHandShakeOf(InputStream inputStream) throws IOException {
+  public static String wsServerHandShakeOf(Socket sck) throws IOException {
     String line;
-    var reader = new BufferedReader(new InputStreamReader(inputStream));
+    var reader = new BufferedReader(new InputStreamReader(sck.getInputStream()));
     var request = new StringBuilder();
     while ((line = reader.readLine()) != null) {
       if (line.isEmpty()) {
@@ -95,7 +95,7 @@ public class TkSockets {
     return request.toString();
   }
 
-  public static String performHandshake(String request, OutputStream outputStream) throws IOException {
+  public static String performHandshake(Socket sck, String request) throws IOException {
     if (request == null || !request.contains("Upgrade: websocket")) {
       return null;
     }
@@ -112,13 +112,13 @@ public class TkSockets {
       + "Upgrade: websocket\r\n"
       + "Connection: Upgrade\r\n"
       + "Sec-WebSocket-Accept: " + acceptKey + "\r\n\r\n";
-    outputStream.write(response.getBytes());
-    outputStream.flush();
+    sendRaw(sck, response.getBytes());
     return response;
   }
 
-  public static void readBlocking(InputStream is, byte[] buff) {
+  public static byte[] readBlocking(Socket sck, byte[] buff) {
     try {
+      var is = sck.getInputStream();
       var bytes = is.read(buff);
       if (log.isTraceEnabled()) {
         log.trace("read {} bytes", bytes);
@@ -126,6 +126,7 @@ public class TkSockets {
       if (bytes == -1) {
         throw new IllegalStateException("eof");
       }
+      return buff;
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
@@ -141,25 +142,33 @@ public class TkSockets {
     }
   }
 
-  public static void sendPing(OutputStream outputStream) throws IOException {
-    byte[] pingFrame = new byte[2];
-    pingFrame[0] = (byte) 0x89; // FIN + opcode 0x9 (PING)
-    pingFrame[1] = 0x00; // No payload
-    outputStream.write(pingFrame);
-    outputStream.flush();
-    log.debug("> PING");
+  public static void sendRaw(Socket sck, byte[] data) throws IOException {
+    var os = sck.getOutputStream();
+    os.write(data);
+    os.flush();
   }
 
-  public static void sendPong(OutputStream outputStream) throws IOException {
-    byte[] pongFrame = new byte[2];
-    pongFrame[0] = (byte) 0x8A; // FIN + opcode 0xA (PONG)
-    pongFrame[1] = 0x00; // No payload
-    outputStream.write(pongFrame);
-    outputStream.flush();
-    log.debug("> PONG");
+  public static void sendPing(Socket sck) {
+    try {
+      var pingFrame = new byte[] { (byte) 0x89, 0x00 }; // FIN + opcode 0x9 (PING), No payload
+      sendRaw(sck, pingFrame);
+      log.debug("> PING");
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
   }
 
-  public static void sendClose(OutputStream outputStream, int closeCode, String closeReason) {
+  public static void sendPong(Socket sck) {
+    try {
+      var pongFrame = new byte[] { (byte) 0x8A, 0x00 }; // FIN + opcode 0xA (PONG), No payload
+      sendRaw(sck, pongFrame);
+      log.debug("> PONG");
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
+  public static void sendClose(Socket sck, int closeCode, String closeReason) {
     try {
       var frame = new ByteArrayOutputStream(); // Close frame header: FIN + opcode 0x8 (CLOSE)
       frame.write(0x88);
@@ -178,8 +187,7 @@ public class TkSockets {
         frame.write(reasonBytes);
       }
 
-      outputStream.write(frame.toByteArray());
-      outputStream.flush();
+      sendRaw(sck, frame.toByteArray());
       if (log.isTraceEnabled()) {
         log.trace("> CLOSE: code={}, reason='{}'", closeCode, closeReason);
       }
@@ -188,7 +196,7 @@ public class TkSockets {
     }
   }
 
-  public static void send(String message, OutputStream outputStream) {
+  public static void send(Socket sck, String message) {
     try {
       var payload = message.getBytes();
       var payloadLength = payload.length;
@@ -212,8 +220,7 @@ public class TkSockets {
         frame.write(payloadLength & 0xFF);         // least significant byte
       }
       frame.write(payload);
-      outputStream.write(frame.toByteArray());
-      outputStream.flush();
+      sendRaw(sck, frame.toByteArray());
       if (log.isTraceEnabled()) {
         log.trace("> TXT: {} ({} bytes)", message, payload.length);
       }
@@ -228,7 +235,7 @@ public class TkSockets {
         var state = socketConn.getState();
         if (state.isClosed()) {
           if (!state.closeByRemote && !socket.isClosed()) {
-            sendClose(socket.getOutputStream(), state.closeCode, state.closeReason);
+            sendClose(socket, state.closeCode, state.closeReason);
           }
         }
         socketHdl.onClose(socketConn);
@@ -242,16 +249,14 @@ public class TkSockets {
     }
   }
 
-  public static int payloadLengthOf(byte[] frameHeader, InputStream is) {
+  public static int payloadLengthOf(Socket sck, byte[] frameHeader) {
     int payloadLength = frameHeader[1] & 0x7F;
     if (payloadLength == 126) {
-      var extendedPayloadLength = new byte[2];
-      readBlocking(is, extendedPayloadLength);
+      var extendedPayloadLength = readBlocking(sck, new byte[2]);
       return wrap(extendedPayloadLength).getShort() & 0xFFFF;
     }
     else if (payloadLength == 127) {
-      var extendedPayloadLength = new byte[8];
-      readBlocking(is, extendedPayloadLength);
+      var extendedPayloadLength = readBlocking(sck, new byte[8]);
       var longPayloadLength = ByteBuffer.wrap(extendedPayloadLength).getLong();
       if (longPayloadLength > Integer.MAX_VALUE) {
         throw new IllegalStateException("payload too large to handle");
@@ -261,41 +266,16 @@ public class TkSockets {
     return payloadLength;
   }
 
-  public static boolean handleMessage(TkSocketHdl socketHdl, TkConn conn,
-                                      InputStream inputStream, OutputStream outputStream) throws IOException, InterruptedException {
+  public static boolean handleMessage(Socket sck, TkConn conn, TkSocketHdl socketHdl) throws IOException, InterruptedException {
     var socketState = conn.getState();
     if (socketState.isClosed()) {
       return true;
     }
-    if (socketState.keepAliveMs > 0) {
-      var nowMs = currentTimeMillis();
-      var noData = inputStream.available() == 0;
-      var pingDiff = nowMs - socketState.lastPingMs;
-      var doPing = pingDiff >= (socketState.keepAliveMs * 0.75);
-      if (doPing || noData) {
-        sendPing(outputStream);
-        socketState.lastPingMs = nowMs;
-        Thread.sleep(
-          pingDiff == nowMs
-            ? socketState.keepAliveMs / 8
-            : socketState.keepAliveMs / 2 // TODO uggghh... move this to a thread or something.
-        );
-        return false;
-      }
-      var pongDiff = nowMs - socketState.lastPongMs;
-      var pongExp = pongDiff != nowMs && pongDiff >= socketState.keepAliveMs; // missing subsequent client pong
-      if (pongExp) {
-        log.warn("Ping/Pong keep-alive expired {}, pingDiff: {}, pongDiff: {}", conn.getSocket().getRemoteSocketAddress(), pingDiff, pongDiff);
-        socketState.markClosed(WsCloseGoAway, WsCloseGoAwayRes, false);
-        return true;
-      }
-    }
 
-    var frameHeader = new byte[2];
-    readBlocking(inputStream, frameHeader);
+    var frameHeader = readBlocking(sck, new byte[2]);
     var isFinalFragment = (frameHeader[0] & 0x80) != 0; // Check if FIN bit is set
     var opcode = frameHeader[0] & 0x0F;
-    var payloadLength = payloadLengthOf(frameHeader, inputStream);
+    var payloadLength = payloadLengthOf(sck, frameHeader);
 
     if (payloadLength > socketState.maxFrameBytes) {
       log.warn("Frame exceeds maximum allowed size: [{}], closing", payloadLength);
@@ -303,10 +283,11 @@ public class TkSockets {
       return true;
     }
 
+    var is = sck.getInputStream();
     var payload = new byte[payloadLength];
     int bytesRead = 0;
     while (bytesRead < payloadLength) {
-      int read = inputStream.read(payload, bytesRead, payloadLength - bytesRead);
+      int read = is.read(payload, bytesRead, payloadLength - bytesRead);
       if (read == -1) {
         throw new IOException("unexpected end of stream");
       }
@@ -334,7 +315,6 @@ public class TkSockets {
         socketHdl.onPong(conn);
       } else if (opcode == 0x9) {
         log.debug("< PING");
-        sendPong(outputStream);
         socketHdl.onPing(conn);
       } else if (opcode == 0x8) {
         if (completeMessage.length >= 2) {
