@@ -7,17 +7,18 @@ public class TkTimer<T> {
 
   private final long intervalMs;
   private final Consumer<T> runCons;
-  private long lastRunMs;
+  private long lastRunMs = -1;
 
   public TkTimer(long intervalMs, Consumer<T> runCons) {
     this.intervalMs = intervalMs;
     this.runCons = Objects.requireNonNull(runCons);
-    this.lastRunMs = System.currentTimeMillis();
   }
 
   public void update(T arg) {
     long currentTime = System.currentTimeMillis();
-    if ((currentTime - lastRunMs) >= intervalMs) {
+    var isFirstRun = lastRunMs == -1;
+    var isNextRun = (currentTime - lastRunMs) >= intervalMs;
+    if (isFirstRun || isNextRun) {
       runCons.accept(arg);
       lastRunMs = currentTime;
     }

@@ -240,7 +240,7 @@ public class TkSockets {
         }
         socketHdl.onClose(socketConn);
       }
-      doClose(socket);
+      tryClose(socket);
       if (log.isDebugEnabled()) {
         log.debug("ws connection closed - {}, {}", socket, socketConn != null ? socketConn.getState() : "?");
       }
@@ -334,7 +334,7 @@ public class TkSockets {
     return false;
   }
 
-  public static void doClose(Closeable c) {
+  public static void tryClose(Closeable c) {
     try {
       if (c != null) {
         c.close();

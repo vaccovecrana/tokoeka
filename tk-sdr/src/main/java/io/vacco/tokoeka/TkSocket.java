@@ -3,13 +3,12 @@ package io.vacco.tokoeka;
 import io.vacco.tokoeka.spi.*;
 import io.vacco.tokoeka.util.*;
 import org.slf4j.*;
-import java.io.*;
 import java.net.Socket;
 
 import static java.util.Objects.requireNonNull;
 import static io.vacco.tokoeka.util.TkSockets.*;
 
-public class TkSocket implements Closeable, TkConn {
+public class TkSocket implements TkConn {
 
   private static final Logger log = LoggerFactory.getLogger(TkSocket.class);
 
@@ -37,49 +36,41 @@ public class TkSocket implements Closeable, TkConn {
     try {
       socket = createSocket(host, port, secure, timeout);
       sendRaw(socket, wsHandShakeOf(host, port, endpoint).getBytes());
-      socketConn = new TkServerConn(socket, socketState, (msg) -> send(socket, msg));
+      socketConn = new TkSocketConn(socket, socketState, socketHdl);
       socketHdl.onOpen(socketConn, wsClientHandShakeResponseOf(socket));
       return this;
     } catch (Exception e) {
       socketHdl.onError(socketConn, e);
-      doClose(this);
+      tearDown(socket, socketConn, socketHdl);
       throw new IllegalStateException("ws connection failed", e);
     }
   }
 
   public void listen() {
-    while (!socket.isClosed()) {
-      try {
+    try {
+      while (!socket.isClosed()) {
         var stop = handleMessage(socket, socketConn, socketHdl);
         if (stop) {
           break;
         }
-      } catch (Exception e) {
-        if (log.isDebugEnabled()) {
-          log.debug("ws message processing error", e);
-        }
-        socketHdl.onError(socketConn, e);
-        break;
       }
+    } catch (Exception e) {
+      if (log.isDebugEnabled()) {
+        log.debug("ws message processing error", e);
+      }
+      socketHdl.onError(socketConn, e);
+    } finally {
+      tearDown(socket, socketConn, socketHdl);
     }
-    tearDown(socket, socketConn, socketHdl);
   }
 
   @Override public void accept(String s) {
     send(this.socket, s);
   }
 
-  @Override public void close() {
-    tearDown(socket, socketConn, socketHdl);
-  }
-
   public TkSocket withHandler(TkSocketHdl hdl) {
     this.socketHdl = requireNonNull(hdl);
     return this;
-  }
-
-  @Override public String toString() {
-    return String.format("%s - %s", socket, endpoint);
   }
 
   @Override public void setAttachment(Object attachment) {
@@ -100,19 +91,23 @@ public class TkSocket implements Closeable, TkConn {
   }
 
   @Override public void sendPing() {
-    TkSockets.sendPing(socket);
+    this.socketConn.sendPing();
   }
 
   @Override public void sendPong() {
-    TkSockets.sendPong(socket);
+    this.socketConn.sendPong();
   }
 
   @Override public void close(int code) {
-    this.socketState.markClosed(code, null, false);
+    this.socketConn.close(code);
   }
 
   @Override public void close(int code, String msg) {
-    this.socketState.markClosed(code, msg, false);
+    this.socketConn.close(code, msg);
+  }
+
+  @Override public String toString() {
+    return String.format("%s - %s", socket, endpoint);
   }
 
 }

@@ -29,10 +29,6 @@ public class TkSocketServer implements Closeable {
     this.clientPool = requireNonNull(clientPool);
   }
 
-  public TkSocketServer(int port, TkSocketHdl socketHdl, Supplier<TkSocketState> stateFn) {
-    this(port, socketHdl, stateFn, Executors.newCachedThreadPool());
-  }
-
   public void start() {
     try {
       serverSocket = new ServerSocket(port);
@@ -53,7 +49,7 @@ public class TkSocketServer implements Closeable {
       var socketState = this.stateFn.get();
       var handShake = wsServerHandShakeOf(clientSocket);
       var handshakeResponse = performHandshake(clientSocket, handShake);
-      conn = new TkServerConn(clientSocket, socketState, msg -> send(clientSocket, msg));
+      conn = new TkSocketConn(clientSocket, socketState, this.socketHdl);
       this.socketHdl.onOpen(conn, handshakeResponse);
       while (!clientSocket.isClosed()) {
         var stop = handleMessage(clientSocket, conn, this.socketHdl);
@@ -73,7 +69,7 @@ public class TkSocketServer implements Closeable {
   @Override public void close() {
     clientPool.shutdown();
     if (serverSocket != null) {
-      doClose(serverSocket);
+      tryClose(serverSocket);
     }
   }
 
