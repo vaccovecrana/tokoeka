@@ -29,7 +29,7 @@ public class TkSocketState {
     this.closeByRemote = closeByRemote;
   }
 
-  public boolean isClosed() {
+  public boolean hasCloseCode() {
     return closeCode != Integer.MIN_VALUE;
   }
 

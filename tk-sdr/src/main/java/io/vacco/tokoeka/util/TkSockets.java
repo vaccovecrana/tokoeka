@@ -233,7 +233,7 @@ public class TkSockets {
     try {
       if (socketConn != null) {
         var state = socketConn.getState();
-        if (state.isClosed()) {
+        if (state.hasCloseCode()) {
           if (!state.closeByRemote && !socket.isClosed()) {
             sendClose(socket, state.closeCode, state.closeReason);
           }
@@ -268,7 +268,7 @@ public class TkSockets {
 
   public static boolean handleMessage(Socket sck, TkConn conn, TkSocketHdl socketHdl) throws IOException, InterruptedException {
     var socketState = conn.getState();
-    if (socketState.isClosed()) {
+    if (socketState.hasCloseCode()) {
       return true;
     }
 
